@@ -1,0 +1,15 @@
+r,g,b,COLOUR,,width,GRAIN_SIZE
+200,134,210,purple,,0.3,sts
+255,211,220,tuff,,1,tuff
+255,255,255,cover,,0.2,cover
+43,182,115,green,,0.3,sts-tuff
+130,170,255,purple-green,,0.35,sts-vfss
+255,242,185,beige,,0.35,sts-vfss-tuff
+231,60,73,brick red,,0.4,vfss
+0,0,0,black,,0.4,vfss-tuff
+80,120,200,brick red-green,,1,sill
+255,0,255,swatch,,0.7,pcg
+147,149,152,grey,,0.8,ccg
+0,110,0,sill,,0.5,fss
+251,176,64,orange,,1,di
+,,,,,0.4,ri
