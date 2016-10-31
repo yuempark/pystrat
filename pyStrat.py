@@ -20,14 +20,25 @@ def read_data(csv_string):
     """
     Imports data from a .csv.
 
-    Note that the .csv must follow the form of the template (adapted from the Matstrat template):
-    - lines 1-4 can be filled with arbitrary relevant information - the code will start reading in data at line 5
-    - Lithofacies:
-        - line 5 MUST contain at least two headers
-        - one of these headers MUST be named 'THICKNESS' - other columns may be named whatever the user desires
-    - Samples:
-        - currently this function supports ash, dz, and paleomagnetism samples (follow the template format).
-          More flexibility will be introduced later.
+    Args:
+        - csv_string (string): path to data .csv
+
+    Returns:
+        - data (dataframe): properly formatted data
+
+    Notes:
+        The .csv must follow the form of the template (adapted from the Matstrat
+        template):
+        - lines 1-4 can be filled with arbitrary relevant information - the code
+          will start reading in data at line 5
+        - Lithofacies:
+            - line 5 MUST contain at least two headers
+            - one of these headers MUST be named 'THICKNESS' - other columns may
+              be named whatever the user desires
+        - Samples:
+            - currently this function supports ash, dz, and paleomagnetism
+              samples (follow the template format). More flexibility will be
+              introduced later.
     """
     # the data
     data = pd.read_csv(csv_string, header=4)
@@ -50,17 +61,27 @@ def read_formatting(csv_string):
     """
     Imports formatting from a .csv.
 
-    Note that the .csv must follow the form of the template:
-    - columns 1-4 are used to set the colour of the boxes:
-        - columns 1-3 must be called 'r', 'g', and 'b' (for red, green, and blue)
-            - values in columns 1-3 must be between 0-255
-        - the header of column 4 must match one of the headers used in the data .csv, and all values in the data
-          must be a subset of the values in this column
-    - columns 6-7 are used to set the width of the boxes:
-        - column 6 must be called 'width'
-        - the header of column 7 must match one of the headers used in the data .csv, and all values in the data
-          must be a subset of the values in this column
-    - column 5 should be left blank for readability
+    Args:
+        - csv_string (string): path to formatting .csv
+
+    Returns:
+        - formatting (dataframe): properly formatted formatting
+
+    Notes:
+        The .csv must follow the form of the template:
+        - columns 1-4 are used to set the colour of the boxes:
+            - columns 1-3 must be called 'r', 'g', and 'b' (for red, green, and
+              blue)
+                - values in columns 1-3 must be between 0-255
+            - the header of column 4 must match one of the headers used in the
+              data .csv, and all values in the data must be a subset of the
+              values in this column
+        - columns 6-7 are used to set the width of the boxes:
+            - column 6 must be called 'width'
+            - the header of column 7 must match one of the headers used in the
+              data .csv, and all values in the data must be a subset of the
+              values in this column
+        - column 5 should be left blank for readability
     """
     # the formatting
     formatting = pd.read_csv(csv_string)
@@ -85,6 +106,14 @@ def read_formatting(csv_string):
 def integrity_check(data, formatting):
     """
     Check that values in the data are a subset of values in the formatting.
+
+    Args:
+        - data (dataframe): properly formatted data
+        - formatting (dataframe): properly formatted formatting
+
+    Raises:
+        Prints result of integrity check. If fail, also prints the item which
+        fails the check.
     """
     # get the colour and width headers being used
     colour_header = formatting.columns[3]
@@ -125,6 +154,14 @@ def integrity_check(data, formatting):
 def plot_stratigraphy(data, formatting):
     """
     Plot everything.
+
+    Args:
+        - data (dataframe): properly formatted data
+        - formatting (dataframe): properly formatted formatting
+
+    Returns:
+        - fig (figure): figure handle
+        - axs (axes): axes handles
     """
     # get the colour and width headers being used
     colour_header = formatting.columns[3]
@@ -342,7 +379,16 @@ def compass_bearing(pointA, pointB):
 
 def dir2cart(data):
     """
-    Converts vector directions, in degrees, to cartesian coordinates, in x,y,z (adapted from pmag.py).
+    Converts vector directions, in degrees, to cartesian coordinates, in x,y,z.
+
+    Args:
+        - data (array): list of [dec,inc]
+
+    Returns:
+        - cart (numpy array): array of [x,y,z]
+
+    Notes:
+        - Adapted from pmag.py
     """
 
     ints = np.ones(len(data)).transpose() # get an array of ones to plug into dec,inc pairs
@@ -381,7 +427,16 @@ def dir2cart(data):
 
 def cart2dir(cart):
     """
-    Converts cartesian coordinates, in x,y,z, to vector directions (adapted from pmag.py).
+    Converts cartesian coordinates, in x,y,z, to vector directions.
+
+    Args:
+        - cart (numpy array): array of [x,y,z]
+
+    Returns:
+        - data (array): list of [dec,inc]
+
+    Notes:
+        - Adapted from pmag.py
     """
 
     cart = np.array(cart)
@@ -424,7 +479,16 @@ def cart2dir(cart):
 
 def fisher_mean(data):
     """
-    Calculate the Fisher mean from a list of [dec,inc] pairs (adapted from pmag.py).
+    Calculate the Fisher mean.
+
+    Args:
+        - data (array): list of [dec,inc]
+
+    Returns:
+        - fpars (dictionary): with dec, inc, n, r, k, alpha95, csd
+
+    Notes:
+        - Adapted from pmag.py
     """
 
     N = len(data)
@@ -481,23 +545,30 @@ def fisher_mean(data):
 
 
 
-def cover_calculator(covers_csv_string):
+def cover_calculator(csv_string):
     """
-    Given the following for the start and end points, calculate a stratigraphic thickness between the two points:
-    - latitude (decimal degrees)
-    - longitude (decimal degrees)
-    - elevation (m)
-    - strike of bedding (RHR)
-    - dip of bedding
+    Calculate a stratigraphic thickness between the two points.
 
-    Input .csv must follow the format of the given template, 'covers_template.csv'.
+    Args:
+        - csv_string (string): path to covers .csv
 
-    Example to run from the command line:
-    python -c 'import cover_calculator; cover_calculator.cover_calculator("Users/yuempark/Documents/Hongzixi_covers.csv")'
+    Notes:
+        Input .csv must follow the format of the given template,
+        'covers_template.csv', and include:
+            - latitude (decimal degrees)
+            - longitude (decimal degrees)
+            - elevation (m)
+            - strike of bedding (RHR)
+            - dip of bedding
+
+        Saves results to a .csv with name: csv_string + '_calculated.csv'
+
+        Example to run from the command line:
+        python -c 'import pyStrat; pyStrat.cover_calculator("Users/yuempark/Documents/Hongzixi_covers.csv")'
     """
 
     # read in the data
-    data = pd.read_csv(covers_csv_string)
+    data = pd.read_csv(csv_string)
 
     for i in range(len(data.index)):
 
@@ -554,4 +625,4 @@ def cover_calculator(covers_csv_string):
         data.loc[i,'HEIGHT'] = round(data['R'][i] * math.cos(math.radians(data['angle'][i])), 1)
 
     # save the .csv
-    data.to_csv(covers_csv_string + '_calculated.csv', index=False)
+    data.to_csv(csv_string + '_calculated.csv', index=False)
