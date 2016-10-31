@@ -36,9 +36,8 @@ def read_data(csv_string):
             - one of these headers MUST be named 'THICKNESS' - other columns may
               be named whatever the user desires
         - Samples:
-            - currently this function supports ash, dz, and paleomagnetism
-              samples (follow the template format). More flexibility will be
-              introduced later.
+            - currently this function supports ash, dz, paleomagnetism,
+              and geochemistry samples (follow the template format).
     """
     # the data
     data = pd.read_csv(csv_string, header=4)
@@ -151,13 +150,14 @@ def integrity_check(data, formatting):
 
 
 
-def plot_stratigraphy(data, formatting):
+def plot_stratigraphy(data, formatting, ratio):
     """
     Plot everything.
 
     Args:
         - data (dataframe): properly formatted data
         - formatting (dataframe): properly formatted formatting
+        - ratio (float): scaling ratio for height of figure
 
     Returns:
         - fig (figure): figure handle
@@ -168,7 +168,7 @@ def plot_stratigraphy(data, formatting):
     width_header = formatting.columns[6]
 
     # create the figure and axis handles, and initiate counting of the stratigraphic height
-    fig, axs = plt.subplots(nrows=1, ncols=4, sharey=True, gridspec_kw = {'width_ratios':[3,1,1,1]})
+    fig, axs = plt.subplots(nrows=1, ncols=7, sharey=True, gridspec_kw = {'width_ratios':[3,1,1,1,2,2,2]})
     strat_height = 0.0
 
     # loop over elements of the data
@@ -204,23 +204,42 @@ def plot_stratigraphy(data, formatting):
                    marker='v',color='crimson',s=50,edgecolors='k',linewidth=0.5)
     axs[3].scatter(np.zeros(len(data['PM_HEIGHT'])),data['PM_HEIGHT'],\
                    marker='o',color='dodgerblue',s=10,edgecolors='k',linewidth=0.1)
+    axs[4].scatter(data['CHEM_d13C'],data['CHEM_HEIGHT'],\
+                   marker='o',color='dodgerblue',s=50,edgecolors='k',linewidth=0.5)
+    axs[5].scatter(data['CHEM_d18O'],data['CHEM_HEIGHT'],\
+                   marker='o',color='seagreen',s=50,edgecolors='k',linewidth=0.5)
+    axs[6].scatter(data['CHEM_87Sr/86Sr'],data['CHEM_HEIGHT'],\
+                   marker='o',color='firebrick',s=50,edgecolors='k',linewidth=0.5)
 
     # force the size of the plot
-    ratio = 0.005
     fig.set_figheight(strat_height * ratio)
-    fig.set_figwidth(6)
+    fig.set_figwidth(10)
 
     # prettify
     axs[0].set_ylabel('stratigraphic height [m]')
+    axs[0].set_xticklabels([])
+    axs[0].set_xticks([])
+
     axs[1].set_title('ashes')
-    axs[2].set_title('detritals')
-    axs[3].set_title('cores')
     axs[1].set_xticklabels([])
-    axs[2].set_xticklabels([])
-    axs[3].set_xticklabels([])
     axs[1].set_xticks([])
+
+    axs[2].set_title('detritals')
+    axs[2].set_xticklabels([])
     axs[2].set_xticks([])
+
+    axs[3].set_title('cores')
+    axs[3].set_xticklabels([])
     axs[3].set_xticks([])
+
+    axs[4].set_title('$\delta^{13}$C')
+    axs[4].xaxis.grid()
+
+    axs[5].set_title('$\delta^{18}$O')
+    axs[5].xaxis.grid()
+
+    axs[6].set_title('$^{87}$Sr/$^{86}$Sr')
+    axs[6].xaxis.grid()
 
     return fig, axs
 
