@@ -150,25 +150,32 @@ def integrity_check(data, formatting):
 
 
 
-def plot_stratigraphy(data, formatting, ratio):
+def initiate_figure(data, formatting, strat_ratio, figwidth, width_ratios):
     """
-    Plot everything.
+    Initiate a figure with the stratigraphic column.
 
     Args:
         - data (dataframe): properly formatted data
         - formatting (dataframe): properly formatted formatting
-        - ratio (float): scaling ratio for height of figure
+        - strat_ratio (float): scaling ratio for height of figure
+        - figwidth (float): figure width
+        - width_ratios (list): width ratios of axes
 
     Returns:
         - fig (figure): figure handle
         - axs (axes): axes handles
     """
+    # get the number of axes from the width_ratios list
+    ncols = len(width_ratios)
+
+    # initiate fig and axs
+    fig, axs = plt.subplots(nrows=1, ncols=ncols, sharey=True, gridspec_kw={'width_ratios':width_ratios})
+
     # get the colour and width headers being used
     colour_header = formatting.columns[3]
     width_header = formatting.columns[6]
 
-    # create the figure and axis handles, and initiate counting of the stratigraphic height
-    fig, axs = plt.subplots(nrows=1, ncols=7, sharey=True, gridspec_kw = {'width_ratios':[3,1,1,1,2,2,2]})
+    # initiate counting of the stratigraphic height
     strat_height = 0.0
 
     # loop over elements of the data
@@ -197,51 +204,48 @@ def plot_stratigraphy(data, formatting, ratio):
     axs[0].set_xlim([0,1])
     axs[0].set_ylim([0,strat_height])
 
-    # plot the samples
-    axs[1].scatter(np.zeros(len(data['ASH_HEIGHT'])),data['ASH_HEIGHT'],\
-                   marker='^',color='firebrick',s=50,edgecolors='k',linewidth=0.5)
-    axs[2].scatter(np.zeros(len(data['DZ_HEIGHT'])),data['DZ_HEIGHT'],\
-                   marker='v',color='crimson',s=50,edgecolors='k',linewidth=0.5)
-    axs[3].scatter(np.zeros(len(data['PM_HEIGHT'])),data['PM_HEIGHT'],\
-                   marker='o',color='dodgerblue',s=10,edgecolors='k',linewidth=0.1)
-    axs[4].scatter(data['CHEM_d13C'],data['CHEM_HEIGHT'],\
-                   marker='o',color='dodgerblue',s=50,edgecolors='k',linewidth=0.5)
-    axs[5].scatter(data['CHEM_d18O'],data['CHEM_HEIGHT'],\
-                   marker='o',color='seagreen',s=50,edgecolors='k',linewidth=0.5)
-    axs[6].scatter(data['CHEM_87Sr/86Sr'],data['CHEM_HEIGHT'],\
-                   marker='o',color='firebrick',s=50,edgecolors='k',linewidth=0.5)
-
     # force the size of the plot
-    fig.set_figheight(strat_height * ratio)
-    fig.set_figwidth(10)
+    fig.set_figheight(strat_height * strat_ratio)
+    fig.set_figwidth(figwidth)
 
     # prettify
     axs[0].set_ylabel('stratigraphic height [m]')
     axs[0].set_xticklabels([])
     axs[0].set_xticks([])
 
-    axs[1].set_title('ashes')
-    axs[1].set_xticklabels([])
-    axs[1].set_xticks([])
-
-    axs[2].set_title('detritals')
-    axs[2].set_xticklabels([])
-    axs[2].set_xticks([])
-
-    axs[3].set_title('cores')
-    axs[3].set_xticklabels([])
-    axs[3].set_xticks([])
-
-    axs[4].set_title('$\delta^{13}$C')
-    axs[4].xaxis.grid()
-
-    axs[5].set_title('$\delta^{18}$O')
-    axs[5].xaxis.grid()
-
-    axs[6].set_title('$^{87}$Sr/$^{86}$Sr')
-    axs[6].xaxis.grid()
-
     return fig, axs
+
+
+
+
+
+def add_data_axis(fig, axs, ax_num, x, y, style, **kwargs):
+    """
+    Add an arbitrary data axis to a figure initiated by initiate_figure.
+
+    Args:
+        - fig (figure): figure handle initiated by initiate_figure
+        - axs (axes): axes handles initiated by initiate_figure
+        - ax_num (float): axis on which to plot
+        - x (list or array): x-data
+        - y (list or array): y-data
+        - style (string): 'plot' or 'scatter'
+        - **kwargs: passed to plt.plot or plt.scatter
+    """
+    # get the correct axis
+    ax = axs[ax_num]
+
+    # plot
+    if style == 'plot':
+        ax.plot(x, y, **kwargs)
+
+    # or scatter
+    elif style == 'scatter':
+        ax.scatter(x, y, **kwargs)
+
+    # or print a warning
+    else:
+        print("Only 'plot' and 'scatter' are supported for 'style'.")
 
 
 
