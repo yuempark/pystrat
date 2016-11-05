@@ -118,6 +118,10 @@ def integrity_check(data, formatting):
     colour_header = formatting.columns[3]
     width_header = formatting.columns[6]
 
+    # if width_header and colour_header are the same, pandas appends a '.1'
+    if width_header.endswith('.1'):
+        width_header = width_header[:-2]
+
     # loop over values in the data
     for i in range(len(data.index)):
         all_check = True
@@ -174,6 +178,10 @@ def initiate_figure(data, formatting, strat_ratio, figwidth, width_ratios):
     # get the colour and width headers being used
     colour_header = formatting.columns[3]
     width_header = formatting.columns[6]
+
+    # if width_header and colour_header are the same, pandas appends a '.1'
+    if width_header.endswith('.1'):
+        width_header = width_header[:-2]
 
     # initiate counting of the stratigraphic height
     strat_height = 0.0
