@@ -2,7 +2,10 @@
 
 A tool for stratigraphic plotting in Python.
 
-Under development. Not ready for public use yet.
+Under development. For now, too crappy for public use.
 
-Developers:
-* Yuem Park
+## Usage
+
+* refer to `pyStrat_draft.ipynb` for an example of plotting features.
+
+Improve the code in anyway you see fit!

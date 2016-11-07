@@ -36,8 +36,7 @@ def read_data(csv_string):
             - one of these headers MUST be named 'THICKNESS' - other columns may
               be named whatever the user desires
         - Samples:
-            - currently this function supports ash, dz, paleomagnetism,
-              and geochemistry samples (follow the template format).
+            - optional
     """
     # the data
     data = pd.read_csv(csv_string, header=4)
