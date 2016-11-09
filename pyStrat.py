@@ -299,15 +299,55 @@ def lowess_fit(y, x, frac=0.6666666666666666, it=3):
 
 
 
-def scatter_variance(strat_height, d13C, interval, mode, frac=0.6666666666666666, it=3):
+def lowess_normalize(strat_height, vals, frac=0.6666666666666666, it=3):
+    """
+    Normalize values to the Lowess Fit.
+
+    Args:
+        - strat_height (list or array): stratigraphic heights of samples
+        - vals (list or array): values of samples
+        - frac (float): between 0 and 1 - the fraction of the data used when
+                        estimating each y-value in the lowess fit
+        - it (int): the number of residual-based reweightings to perform
+
+    Returns:
+        - xy (array): the first column is the sorted x values and the second
+                       column the associated estimated y-values
+        - norm_vals (array): normalized values
+        - norm_heights (array): associated height values
+    """
+    # combine strat_height and d13C into a dataframe
+    section_data = pd.DataFrame({'strat_height':strat_height, 'vals':vals})
+
+    # pull out the non-nan values
+    finite_vals = np.array([])
+    norm_heights = np.array([])
+    for i in range(len(section_data.index)):
+        if np.isfinite(section_data['vals'][i]):
+            finite_vals = np.append(finite_vals, section_data['vals'][i])
+            norm_heights = np.append(norm_heights, section_data['strat_height'][i])
+
+    # the lowess fit
+    xy = lowess_fit(finite_vals, norm_heights, frac, it)
+
+    # normalize
+    norm_vals = finite_vals - xy[:,1]
+
+    return xy, norm_vals, norm_heights
+
+
+
+
+def scatter_variance(strat_height, vals, interval, mode, frac=0.6666666666666666, it=3):
     """
     Calculate the variance in scatterplot data.
 
     Args:
         - strat_height (list or array): stratigraphic heights of samples
-        - d13C (list or array): d13C of samples
+        - vals (list or array): values of samples
         - interval (float): window height used to calculate variance
-        - mode (string): 'standard' (raw data) or 'normalized' (lowess fit
+        - mode (string): 'standard' (raw data), 'window_normalized' (windowed
+                         lowess fit subtracted), or 'all_normalized' (lowess fit
                          subtracted)
         - frac (float): between 0 and 1 - the fraction of the data used when
                         estimating each y-value in the lowess fit
@@ -320,67 +360,105 @@ def scatter_variance(strat_height, d13C, interval, mode, frac=0.6666666666666666
     Additional Returns ('normalized'):
         - xys (array): the first column is the sorted x values and the second
                        column the associated estimated y-values
-        - norm_d13Cs (array): normalized d13C values
-        - heights (array): d13C height values
+        - norm_vals (array): normalized values
+        - norm_heights (array): associated height values
     """
-    # combine strat_height and d13C into a dataframe
-    section_data = pd.DataFrame({'strat_height':strat_height, 'd13C':d13C})
-
     # initiate storage arrays
     variances = np.array([])
     strat_height_mids = np.array([])
-    norm_d13Cs = np.array([])
-    heights = np.array([])
-    xys_initialized = False
 
-    # get the first window bot and top
-    window_bot = min(section_data['strat_height'])
-    window_top = window_bot + interval
+    # all normalized mode
+    if mode == 'all_normalized':
+        # lowess normalize all the data
+        xys, norm_vals, norm_heights = lowess_normalize(strat_height, vals, frac, it)
 
-    # keep iterating until our window moves past the whole section
-    while window_bot <= max(section_data['strat_height']):
-        # pull out the current window
-        window = section_data[(section_data['strat_height']>=window_bot) &\
-                              (section_data['strat_height']<=window_top)]
-        window.reset_index(drop=True, inplace=True)
+        # get the first window bot and top
+        window_bot = min(norm_heights)
+        window_top = window_bot + interval
 
-        # pull out non-nan values
-        window_d13Cs = np.array([])
-        window_heights = np.array([])
-        for i in range(len(window.index)):
-            if np.isfinite(window['d13C'][i]):
-                window_d13Cs = np.append(window_d13Cs, window['d13C'][i])
-                window_heights = np.append(window_heights, window['strat_height'][i])
+        # keep iterating until our window moves past the whole section
+        while window_bot <= max(norm_heights):
 
-        # only move on if we have enough data
-        if len(window_d13Cs) >= 2:
-            # the standard mode
-            if mode == 'standard':
-                variances = np.append(variances, statistics.variance(window_d13Cs))
-            # the lowess fit normalized mode
-            elif mode == 'normalized':
-                xy = lowess_fit(window_d13Cs, window_heights, frac, it)
-                if xys_initialized:
-                    xys = np.concatenate((xys, xy),axis=0)
-                else:
-                    xys = xy
-                    xys_initialized = True
-                window_norm_d13Cs = window_d13Cs - xy[:,1]
-                variances = np.append(variances, statistics.variance(window_norm_d13Cs))
-                norm_d13Cs = np.append(norm_d13Cs, window_norm_d13Cs)
-            heights = np.append(heights, window_heights)
+            # pull out normalized values in the window
+            window_norm_vals = np.array([])
+            for i in range(len(norm_heights)):
+                if norm_heights[i]>=window_bot and norm_heights[i]<window_top:
+                    window_norm_vals = np.append(window_norm_vals, norm_vals[i])
 
-            # append the middle of the window
-            strat_height_mids = np.append(strat_height_mids, (window_top + window_bot)/2)
+            # if we have enough data in the window
+            if len(window_norm_vals) >= 2:
+                variances = np.append(variances, statistics.variance(window_norm_vals))
+                strat_height_mids = np.append(strat_height_mids, (window_top + window_bot)/2)
 
-        # increment the window bot and top
-        window_bot = window_bot + interval
-        window_top = window_top + interval
+            # increment the window bot and top
+            window_bot = window_bot + interval
+            window_top = window_top + interval
+
+    # the other modes
+    else:
+        # combine strat_height and vals into a dataframe
+        section_data = pd.DataFrame({'strat_height':strat_height, 'vals':vals})
+
+        # initiate storage arrays
+        norm_vals = np.array([])
+        norm_heights = np.array([])
+        xys_initialized = False
+
+        # get the first window bot and top
+        window_bot = min(section_data['strat_height'])
+        window_top = window_bot + interval
+
+        # keep iterating until our window moves past the whole section
+        while window_bot <= max(section_data['strat_height']):
+            # pull out the current window
+            window = section_data[(section_data['strat_height']>=window_bot) &\
+                                  (section_data['strat_height']<window_top)]
+            window.reset_index(drop=True, inplace=True)
+
+            # pull out non-nan values
+            window_vals = np.array([])
+            window_heights = np.array([])
+            for i in range(len(window.index)):
+                if np.isfinite(window['vals'][i]):
+                    window_vals = np.append(window_vals, window['vals'][i])
+                    window_heights = np.append(window_heights, window['strat_height'][i])
+
+            # only move on if we have enough data
+            if len(window_vals) >= 2:
+                # the standard mode
+                if mode == 'standard':
+                    # variances on raw data
+                    variances = np.append(variances, statistics.variance(window_vals))
+
+                # the window normalized mode
+                elif mode == 'window_normalized':
+                    # lowess fit the window
+                    xy = lowess_fit(window_vals, window_heights, frac, it)
+                    # store lowess fit results
+                    if xys_initialized:
+                        xys = np.concatenate((xys, xy),axis=0)
+                    else:
+                        xys = xy
+                        xys_initialized = True
+                    # normalize the values
+                    window_norm_vals = window_vals - xy[:,1]
+                    # variances on window normalized data
+                    variances = np.append(variances, statistics.variance(window_norm_vals))
+                    norm_vals = np.append(norm_vals, window_norm_vals)
+
+                norm_heights = np.append(norm_heights, window_heights)
+
+                # append the middle of the window
+                strat_height_mids = np.append(strat_height_mids, (window_top + window_bot)/2)
+
+            # increment the window bot and top
+            window_bot = window_bot + interval
+            window_top = window_top + interval
 
     if mode == 'standard':
         return variances, strat_height_mids
-    elif mode == 'normalized':
-        return variances, strat_height_mids, xys, norm_d13Cs, heights
+    elif mode == 'window_normalized' or mode == 'all_normalized':
+        return variances, strat_height_mids, xys, norm_vals, norm_heights
 
 
 
