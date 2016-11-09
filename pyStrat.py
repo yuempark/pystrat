@@ -3,6 +3,8 @@ import math
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import statistics
+import statsmodels.api as sm
 
 
 
@@ -236,8 +238,13 @@ def add_data_axis(fig, axs, ax_num, x, y, style, **kwargs):
         - ax_num (float): axis on which to plot
         - x (list or array): x-data
         - y (list or array): y-data
-        - style (string): 'plot' or 'scatter'
-        - **kwargs: passed to plt.plot or plt.scatter
+        - style (string): 'plot', 'scatter', or 'barh'
+        - **kwargs: passed to plt.plot, plt.scatter, or plt.barh
+
+    Notes:
+        If 'barh' is selected, it is recommended that a 'height' kwarg be passed
+        to this function (see the documentation for matplotlib.pyplot.barh).
+        Also, note that 'y' becomes the bottom-left coordinate of the bar.
     """
     # get the correct axis
     ax = axs[ax_num]
@@ -250,9 +257,12 @@ def add_data_axis(fig, axs, ax_num, x, y, style, **kwargs):
     elif style == 'scatter':
         ax.scatter(x, y, **kwargs)
 
+    elif style == 'barh':
+        ax.barh(y, x, **kwargs)
+
     # or print a warning
     else:
-        print("Only 'plot' and 'scatter' are supported for 'style'.")
+        print("Only 'plot', 'scatter', and 'barh' are supported for 'style'.")
 
 
 
@@ -261,6 +271,116 @@ def add_data_axis(fig, axs, ax_num, x, y, style, **kwargs):
 #################################
 ##### CALCULATION FUNCTIONS #####
 #################################
+
+
+
+
+
+def lowess_fit(y, x, frac=0.6666666666666666, it=3):
+    """
+    Lowess fit for a scatterplot.
+
+    Args:
+        - y (list or array): data y-values
+        - x (list or array): data x-values
+        - frac (float): between 0 and 1 - the fraction of the data used when
+                        estimating each y-value
+        - it (int): the number of residual-based reweightings to perform
+
+    Returns:
+        - xy (array): the first column is the sorted x values and the second
+                      column the associated estimated y-values
+    """
+    xy = sm.nonparametric.lowess(y, x, frac=frac, it=it)
+
+    return xy
+
+
+
+
+
+def scatter_variance(strat_height, d13C, interval, mode, frac=0.6666666666666666, it=3):
+    """
+    Calculate the variance in scatterplot data.
+
+    Args:
+        - strat_height (list or array): stratigraphic heights of samples
+        - d13C (list or array): d13C of samples
+        - interval (float): window height used to calculate variance
+        - mode (string): 'standard' (raw data) or 'normalized' (lowess fit
+                         subtracted)
+        - frac (float): between 0 and 1 - the fraction of the data used when
+                        estimating each y-value in the lowess fit
+        - it (int): the number of residual-based reweightings to perform
+
+    Returns ('standard'):
+        - variances (array): calculated variances
+        - strat_height_mids (array): middle of windows used
+
+    Additional Returns ('normalized'):
+        - xys (array): the first column is the sorted x values and the second
+                       column the associated estimated y-values
+        - norm_d13Cs (array): normalized d13C values
+        - heights (array): d13C height values
+    """
+    # combine strat_height and d13C into a dataframe
+    section_data = pd.DataFrame({'strat_height':strat_height, 'd13C':d13C})
+
+    # initiate storage arrays
+    variances = np.array([])
+    strat_height_mids = np.array([])
+    norm_d13Cs = np.array([])
+    heights = np.array([])
+    xys_initialized = False
+
+    # get the first window bot and top
+    window_bot = min(section_data['strat_height'])
+    window_top = window_bot + interval
+
+    # keep iterating until our window moves past the whole section
+    while window_bot <= max(section_data['strat_height']):
+        # pull out the current window
+        window = section_data[(section_data['strat_height']>=window_bot) &\
+                              (section_data['strat_height']<=window_top)]
+        window.reset_index(drop=True, inplace=True)
+
+        # pull out non-nan values
+        window_d13Cs = np.array([])
+        window_heights = np.array([])
+        for i in range(len(window.index)):
+            if np.isfinite(window['d13C'][i]):
+                window_d13Cs = np.append(window_d13Cs, window['d13C'][i])
+                window_heights = np.append(window_heights, window['strat_height'][i])
+
+        # only move on if we have enough data
+        if len(window_d13Cs) >= 2:
+            # the standard mode
+            if mode == 'standard':
+                variances = np.append(variances, statistics.variance(window_d13Cs))
+            # the lowess fit normalized mode
+            elif mode == 'normalized':
+                xy = lowess_fit(window_d13Cs, window_heights, frac, it)
+                if xys_initialized:
+                    xys = np.concatenate((xys, xy),axis=0)
+                else:
+                    xys = xy
+                    xys_initialized = True
+                window_norm_d13Cs = window_d13Cs - xy[:,1]
+                variances = np.append(variances, statistics.variance(window_norm_d13Cs))
+                norm_d13Cs = np.append(norm_d13Cs, window_norm_d13Cs)
+            heights = np.append(heights, window_heights)
+
+            # append the middle of the window
+            strat_height_mids = np.append(strat_height_mids, (window_top + window_bot)/2)
+
+        # increment the window bot and top
+        window_bot = window_bot + interval
+        window_top = window_top + interval
+
+    if mode == 'standard':
+        return variances, strat_height_mids
+    elif mode == 'normalized':
+        return variances, strat_height_mids, xys, norm_d13Cs, heights
 
 
 
