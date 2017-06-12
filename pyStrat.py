@@ -96,7 +96,7 @@ def read_formatting(csv_string):
     colour_header = formatting.columns[3]
     width_header = formatting.columns[6]
 
-    # return the  dataframe
+    # return the dataframe
     return formatting
 
 
@@ -278,7 +278,7 @@ def add_data_axis(fig, axs, ax_num, x, y, style, **kwargs):
 
 def lowess_fit(y, x, frac=0.6666666666666666, it=3):
     """
-    Lowess fit for a scatterplot.
+    LOWESS fit for a scatterplot.
 
     Args:
         - y (list or array): data y-values
@@ -301,7 +301,7 @@ def lowess_fit(y, x, frac=0.6666666666666666, it=3):
 
 def lowess_normalize(strat_height, vals, frac=0.6666666666666666, it=3):
     """
-    Normalize values to the Lowess Fit.
+    Normalize values to the LOWESS fit.
 
     Args:
         - strat_height (list or array): stratigraphic heights of samples
