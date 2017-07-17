@@ -155,7 +155,79 @@ def integrity_check(data, formatting):
 
 
 
-def initiate_figure(data, formatting, strat_ratio, figwidth, width_ratios):
+def plot_legend(formatting):
+    """
+    Plot all items in the formatting.
+
+    Args:
+        - formatting (dataframe): properly formatted formatting
+
+    Returns:
+        - fig (figure): figure handle
+        - ax (axis): axis handle
+    """
+    # get the colour and width headers being used
+    colour_header = formatting.columns[3]
+    width_header = formatting.columns[6]
+
+    # if width_header and colour_header are the same, pandas appends a '.1'
+    if width_header.endswith('.1'):
+        width_header = width_header[:-2]
+
+    # if the colour and width headers are the same...
+    if colour_header == width_header:
+
+        # sort the formatting
+        formatting = formatting.copy()
+        formatting.sort_values('width', inplace=True)
+        formatting.reset_index(inplace=True, drop=True)
+
+        # initiate fig and ax
+        fig, ax = plt.subplots()
+
+        # initiate counting of the stratigraphic height
+        strat_height = 0.0
+
+        # loop over each item
+        for i in range(len(formatting.index)):
+            this_colour = [formatting['r'][i], formatting['g'][i], formatting['b'][i]]
+            this_width = formatting['width'][i]
+
+            # create the rectangle - with thickness of 1
+            ax.add_patch(patches.Rectangle((0.0,strat_height), this_width, 1, facecolor=this_colour, edgecolor='k'))
+
+            # label the unit
+            ax.text(0.02, strat_height+0.5, formatting[colour_header][i], horizontalalignment='left', verticalalignment='center')
+
+            # count the stratigraphic height
+            strat_height = strat_height + 1
+
+        # force the limits on the lithostratigraphy plot
+        ax.set_xlim([0,1])
+        ax.set_ylim([0,strat_height])
+
+        # force the size of the plot
+        fig.set_figheight(strat_height * 0.3)
+        fig.set_figwidth(3)
+
+        # prettify
+        ax.set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1])
+        ax.set_axisbelow(True)
+        ax.xaxis.grid()
+        ax.set_yticklabels([])
+        ax.set_yticks([])
+
+        return fig, ax
+
+    # if they aren't the same... haven't developed this code yet
+    else:
+        print('colour_header and width_header are not the same - plot_legend still under development for this case.')
+
+
+
+
+
+def initiate_figure(data, formatting, strat_ratio, figwidth, width_ratios, linewidth=1):
     """
     Initiate a figure with the stratigraphic column.
 
@@ -165,6 +237,7 @@ def initiate_figure(data, formatting, strat_ratio, figwidth, width_ratios):
         - strat_ratio (float): scaling ratio for height of figure
         - figwidth (float): figure width
         - width_ratios (list): width ratios of axes
+        - linewidth (float): line width (default = 1)
 
     Returns:
         - fig (figure): figure handle
@@ -204,7 +277,7 @@ def initiate_figure(data, formatting, strat_ratio, figwidth, width_ratios):
                     this_width = formatting['width'][j]
 
             # create the rectangle
-            axs[0].add_patch(patches.Rectangle((0.0,strat_height), this_width, this_thickness, facecolor=this_colour))
+            axs[0].add_patch(patches.Rectangle((0.0,strat_height), this_width, this_thickness, facecolor=this_colour, edgecolor='k', linewidth=linewidth))
 
             # count the stratigraphic height
             strat_height = strat_height + this_thickness
@@ -228,7 +301,7 @@ def initiate_figure(data, formatting, strat_ratio, figwidth, width_ratios):
 
 
 
-def add_data_axis(fig, axs, ax_num, x, y, style, **kwargs):
+def add_data_axis(fig, axs, ax_num, x, y, plot_type, **kwargs):
     """
     Add an arbitrary data axis to a figure initiated by initiate_figure.
 
@@ -238,7 +311,7 @@ def add_data_axis(fig, axs, ax_num, x, y, style, **kwargs):
         - ax_num (float): axis on which to plot
         - x (list or array): x-data
         - y (list or array): y-data
-        - style (string): 'plot', 'scatter', or 'barh'
+        - plot_type (string): 'plot', 'scatter', or 'barh'
         - **kwargs: passed to plt.plot, plt.scatter, or plt.barh
 
     Notes:
@@ -250,19 +323,61 @@ def add_data_axis(fig, axs, ax_num, x, y, style, **kwargs):
     ax = axs[ax_num]
 
     # plot
-    if style == 'plot':
+    if plot_type == 'plot':
         ax.plot(x, y, **kwargs)
 
     # or scatter
-    elif style == 'scatter':
+    elif plot_type == 'scatter':
         ax.scatter(x, y, **kwargs)
 
-    elif style == 'barh':
+    elif plot_type == 'barh':
         ax.barh(y, x, **kwargs)
 
     # or print a warning
     else:
-        print("Only 'plot', 'scatter', and 'barh' are supported for 'style'.")
+        print("Only 'plot', 'scatter', and 'barh' are supported for 'plot_type'.")
+
+
+
+
+
+####################################
+##### DATA WRANGLING FUNCTIONS #####
+####################################
+
+
+
+
+
+def sample_curate(data, nominal_height, remarks):
+    """
+    Assigns the correct height and unit to collected samples.
+
+    Args:
+        - data (dataframe): properly formatted data
+        - recorded_height (list or array): recorded height of samples
+        - remarks (list or array): field addition errors noted
+
+    Returns:
+        - height (array): true height of samples
+        - unit (array): unit/horizon from which the sample was collected
+
+    Notes:
+        Field addition errors should be noted as "ADD X" in the remarks column.
+
+        If a sample was collected at a unit boundary, it will be denoted with
+        both adjacent units.
+    """
+    # remove nans from the nominal_height array
+    no_nans = np.array([])
+    for i in range(len(nominal_height)):
+        if np.isfinite(nominal_height[i]):
+            no_nans = np.append(no_nans, nominal_height[i])
+    nominal_height = no_nans
+
+    # make sure the sample list is sorted
+    nominal_height = np.sort(nominal_height)
+
 
 
 
