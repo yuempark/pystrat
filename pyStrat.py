@@ -54,7 +54,7 @@ def read_data(csv_string):
     data=data[cols]
 
     # print total stratigraphic thickness
-    print('total stratigraphic thickness = ' + str(np.sum(data['THICKNESS'])) + ' m')
+    print('total stratigraphic thickness = ' + str(np.round(np.sum(data['THICKNESS']),2)) + ' m')
 
     # return the dataframe
     return data
@@ -370,12 +370,23 @@ def sample_curate(data, recorded_height, remarks):
 
     Notes:
         Field addition errors should be noted as "ADD X" or "SUB X" in the
-        remarks array, and only needs to be noted at the first sample where the
+        remarks array, and only need to be noted at the first sample where the
         correction comes into effect.
 
-        If a sample was collected at a unit boundary, it will be denoted with
-        both adjacent units. The user must assign the correct unit for these
-        samples manually.
+        Samples marked with a .5 in the 'unit' column come from unit boundaries.
+        User input is required to assign the correct unit.
+
+        If the sample comes from the lower unit, subtract 0.5
+                                     upper unit,      add 0.5
+
+        After fixing all changes, copy and paste the dataframe into the data
+        .csv.
+
+        A useful masking command to only show samples on unit boundaries in
+        jupyter notebook:
+
+            mask = (sample_info['unit'] != np.floor(sample_info['unit']))
+            sample_info[mask]
 
         Units are zero indexed as in the Python convention.
     """
@@ -395,11 +406,11 @@ def sample_curate(data, recorded_height, remarks):
     height = np.array([])
     adjustment = 0.0
     for i in range(len(recorded_height)):
-        if 'ADD' in remarks[i]:
-            value = float(split(remarks[i])[1])
+        if 'ADD' in str(remarks[i]):
+            value = float(remarks[i].split()[1])
             adjustment = adjustment + value
-        elif 'SUB' in remarks[i]:
-            value = float(split(remarks[i])[1])
+        elif 'SUB' in str(remarks[i]):
+            value = float(remarks[i].split()[1])
             adjustment = adjustment - value
         height = np.append(height, recorded_height[i] + adjustment)
 
@@ -425,14 +436,10 @@ def sample_curate(data, recorded_height, remarks):
     # create the output dataframe
     sample_info = pd.DataFrame({'recorded_height':recorded_height, 'remarks':remarks, 'height':height, 'unit':unit})
 
-    # print instructions and return
-    print('Copy and paste the output dataframe into the data .csv.')
-    print(' ')
-    print("IMPORTANT: Samples marked with a .5 in the 'unit' column come from")
-    print('unit boundaries. User input is required to assign the correct unit.')
-    print(' ')
-    print('If the sample comes from the lower unit, subtract 0.5')
-    print('                             upper unit,      add 0.5')
+    # clean up the dataframe
+    cols = ['recorded_height', 'remarks', 'height', 'unit']
+    sample_info = sample_info[cols]
+    sample_info.reset_index(inplace=True, drop=True)
 
     return sample_info
 
