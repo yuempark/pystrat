@@ -10,9 +10,9 @@ import statsmodels.api as sm
 
 
 
-##############################
-##### PLOTTING FUNCTIONS #####
-##############################
+########################################
+########## PLOTTING FUNCTIONS ##########
+########################################
 
 
 
@@ -27,6 +27,9 @@ def read_data(csv_string):
 
     Returns:
         - data (dataframe): properly formatted data
+
+    Prints:
+        - total stratigraphic thickness of the section
 
     Notes:
         The .csv must follow the form of the template (adapted from the Matstrat
@@ -49,6 +52,9 @@ def read_data(csv_string):
         if 'Unnamed' not in c:
             cols.append(c)
     data=data[cols]
+
+    # print total stratigraphic thickness
+    print('total stratigraphic thickness = ' + str(np.sum(data['THICKNESS'])) + ' m')
 
     # return the dataframe
     return data
@@ -123,9 +129,10 @@ def integrity_check(data, formatting):
     if width_header.endswith('.1'):
         width_header = width_header[:-2]
 
+    all_check = True
+
     # loop over values in the data
     for i in range(len(data.index)):
-        all_check = True
         colour_check = False
         width_check = False
 
@@ -341,15 +348,15 @@ def add_data_axis(fig, axs, ax_num, x, y, plot_type, **kwargs):
 
 
 
-####################################
-##### DATA WRANGLING FUNCTIONS #####
-####################################
+##############################################
+########## DATA WRANGLING FUNCTIONS ##########
+##############################################
 
 
 
 
 
-def sample_curate(data, nominal_height, remarks):
+def sample_curate(data, recorded_height, remarks):
     """
     Assigns the correct height and unit to collected samples.
 
@@ -359,33 +366,83 @@ def sample_curate(data, nominal_height, remarks):
         - remarks (list or array): field addition errors noted
 
     Returns:
-        - height (array): true height of samples
-        - unit (array): unit/horizon from which the sample was collected
+        - sample_info (dataframe): recorded_height, remarks, height, and unit
 
     Notes:
-        Field addition errors should be noted as "ADD X" in the remarks column.
+        Field addition errors should be noted as "ADD X" or "SUB X" in the
+        remarks array, and only needs to be noted at the first sample where the
+        correction comes into effect.
 
         If a sample was collected at a unit boundary, it will be denoted with
-        both adjacent units.
+        both adjacent units. The user must assign the correct unit for these
+        samples manually.
+
+        Units are zero indexed as in the Python convention.
     """
     # remove nans from the nominal_height array
     no_nans = np.array([])
-    for i in range(len(nominal_height)):
-        if np.isfinite(nominal_height[i]):
-            no_nans = np.append(no_nans, nominal_height[i])
-    nominal_height = no_nans
+    for i in range(len(recorded_height)):
+        if np.isfinite(recorded_height[i]):
+            no_nans = np.append(no_nans, recorded_height[i])
+    recorded_height = no_nans
 
     # make sure the sample list is sorted
-    nominal_height = np.sort(nominal_height)
+    sort_ind = recorded_height.argsort()
+    recorded_height = recorded_height[sort_ind]
+    remarks = remarks[sort_ind]
+
+    # calculate the true height of the samples
+    height = np.array([])
+    adjustment = 0.0
+    for i in range(len(recorded_height)):
+        if 'ADD' in remarks[i]:
+            value = float(split(remarks[i])[1])
+            adjustment = adjustment + value
+        elif 'SUB' in remarks[i]:
+            value = float(split(remarks[i])[1])
+            adjustment = adjustment - value
+        height = np.append(height, recorded_height[i] + adjustment)
+
+    # create a stratigraphic height column
+    strat_height = np.array([data['THICKNESS'][0]])
+    for i in range(1, len(data['THICKNESS'])):
+        if np.isfinite(data['THICKNESS'][i]):
+            strat_height = np.append(strat_height, data['THICKNESS'][i] + strat_height[-1])
+
+    # calculate the unit from which the sample came
+    unit = np.array([])
+    for i in range(len(height)):
+        unit_ind = 0
+        while strat_height[unit_ind] < height[i]:
+            unit_ind = unit_ind + 1
+
+        # if the sample comes from a unit boundary, mark with .5
+        if strat_height[unit_ind] == height[i]:
+            unit = np.append(unit, unit_ind + 0.5)
+        else:
+            unit = np.append(unit, unit_ind)
+
+    # create the output dataframe
+    sample_info = pd.DataFrame({'recorded_height':recorded_height, 'remarks':remarks, 'height':height, 'unit':unit})
+
+    # print instructions and return
+    print('Copy and paste the output dataframe into the data .csv.')
+    print(' ')
+    print("IMPORTANT: Samples marked with a .5 in the 'unit' column come from")
+    print('unit boundaries. User input is required to assign the correct unit.')
+    print(' ')
+    print('If the sample comes from the lower unit, subtract 0.5')
+    print('                             upper unit,      add 0.5')
+
+    return sample_info
 
 
 
 
 
-
-#################################
-##### CALCULATION FUNCTIONS #####
-#################################
+###########################################
+########## CALCULATION FUNCTIONS ##########
+###########################################
 
 
 
