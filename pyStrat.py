@@ -28,9 +28,6 @@ def read_data(csv_string):
     Returns:
         - data (dataframe): properly formatted data
 
-    Prints:
-        - total stratigraphic thickness of the section
-
     Notes:
         The .csv must follow the form of the template (adapted from the Matstrat
         template):
@@ -38,8 +35,9 @@ def read_data(csv_string):
           will start reading in data at line 5
         - Lithofacies:
             - line 5 MUST contain at least two headers
-            - one of these headers MUST be named 'THICKNESS' - other columns may
-              be named whatever the user desires
+            - one of these headers MUST be named 'THICKNESS'
+            - one of these headers MUST be named 'FEATURES'
+            - other columns may be named whatever the user desires
         - Samples:
             - optional
     """
@@ -51,10 +49,7 @@ def read_data(csv_string):
     for c in data.columns:
         if 'Unnamed' not in c:
             cols.append(c)
-    data=data[cols]
-
-    # print total stratigraphic thickness
-    print('total stratigraphic thickness = ' + str(np.round(np.sum(data['THICKNESS']),2)) + ' m')
+    data = data[cols]
 
     # return the dataframe
     return data
@@ -129,6 +124,10 @@ def integrity_check(data, formatting):
     if width_header.endswith('.1'):
         width_header = width_header[:-2]
 
+    # failed items
+    colour_failed = []
+    width_failed = []
+
     all_check = True
 
     # loop over values in the data
@@ -146,12 +145,16 @@ def integrity_check(data, formatting):
                 if data[width_header][i] == formatting[width_header][j]:
                     width_check = True
 
-            # print warning if the check fails
+            # only print warning if the check fails for the first time
             if colour_check == False:
-                print('Colour check failed for item ' + str(data[colour_header][i]) + '.')
+                if data[colour_header][i] not in colour_failed:
+                    print('Colour check failed for item ' + str(data[colour_header][i]) + '.')
+                    colour_failed.append(data[colour_header][i])
                 all_check = False
             if width_check == False:
-                print('Width check failed for item ' + str(data[width_header][i]) + '.')
+                if data[width_header][i] not in width_failed:
+                    print('Width check failed for item ' + str(data[width_header][i]) + '.')
+                    width_failed.append(data[width_header][i])
                 all_check = False
 
     # print an all clear statement if the check passes
@@ -286,6 +289,10 @@ def initiate_figure(data, formatting, strat_ratio, figwidth, width_ratios, linew
             # create the rectangle
             axs[0].add_patch(patches.Rectangle((0.0,strat_height), this_width, this_thickness, facecolor=this_colour, edgecolor='k', linewidth=linewidth))
 
+            # if there are any features to be labelled, label it
+            if pd.notnull(data['FEATURES'][i]):
+                axs[1].text(0.02, strat_height + (this_thickness/2), data['FEATURES'][i], horizontalalignment='left', verticalalignment='center')
+
             # count the stratigraphic height
             strat_height = strat_height + this_thickness
 
@@ -301,6 +308,8 @@ def initiate_figure(data, formatting, strat_ratio, figwidth, width_ratios, linew
     axs[0].set_ylabel('stratigraphic height [m]')
     axs[0].set_xticklabels([])
     axs[0].set_xticks([])
+    axs[1].set_xticklabels([])
+    axs[1].set_xticks([])
 
     return fig, axs
 
@@ -390,17 +399,23 @@ def sample_curate(data, recorded_height, remarks):
 
         Units are zero indexed as in the Python convention.
     """
-    # remove nans from the nominal_height array
+    # remove nans from the recorded_height array (appended to the end) and corresponding remarks
     no_nans = np.array([])
     for i in range(len(recorded_height)):
         if np.isfinite(recorded_height[i]):
             no_nans = np.append(no_nans, recorded_height[i])
     recorded_height = no_nans
+    remarks = remarks[:len(recorded_height)]
 
     # make sure the sample list is sorted
-    sort_ind = recorded_height.argsort()
-    recorded_height = recorded_height[sort_ind]
-    remarks = remarks[sort_ind]
+    if np.array_equal(np.sort(recorded_height), recorded_height):
+        pass
+    else:
+        print('WARNING: Samples were out of order in the data file. Please check')
+        print('         that samples were not logged incorrectly.')
+        sort_ind = recorded_height.argsort()
+        recorded_height = recorded_height[sort_ind]
+        remarks = remarks[sort_ind]
 
     # calculate the true height of the samples
     height = np.array([])
@@ -424,11 +439,13 @@ def sample_curate(data, recorded_height, remarks):
     unit = np.array([])
     for i in range(len(height)):
         unit_ind = 0
-        while strat_height[unit_ind] < height[i]:
+
+        # stop once the strat_height is equal to or greater than the sample height (with some tolerance for computer weirdness)
+        while strat_height[unit_ind] < (height[i] - 1e-5):
             unit_ind = unit_ind + 1
 
-        # if the sample comes from a unit boundary, mark with .5
-        if strat_height[unit_ind] == height[i]:
+        # if the sample comes from a unit boundary, mark with .5 (with some tolerance for computer weirdness)
+        if abs(strat_height[unit_ind] - height[i]) < 1e-5:
             unit = np.append(unit, unit_ind + 0.5)
         else:
             unit = np.append(unit, unit_ind)
@@ -442,6 +459,94 @@ def sample_curate(data, recorded_height, remarks):
     sample_info.reset_index(inplace=True, drop=True)
 
     return sample_info
+
+
+
+
+
+def print_unit_edit_code(sample_info, variable_string):
+    """
+    Prints the code for editing units.
+
+    Args:
+        - sample_info (dataframe): recorded_height, remarks, height, and unit
+        - variable_string (string): string of the variable name for sample_info
+
+    Notes:
+        Copy and paste the printed code into a cell and edit as follows:
+
+        If the sample comes from the lower unit, subtract 0.5
+                                     upper unit,      add 0.5
+
+        After fixing all changes, copy and paste the dataframe into the data
+        .csv.
+    """
+    # get the samples on unit boundaries
+    mask = (sample_info['unit'] != np.floor(sample_info['unit']))
+    boundary_sample_info = sample_info[mask]
+
+    print('=====')
+
+    # the case where there are no samples on units boundaries
+    if len(boundary_sample_info.index) == 0:
+        print('No samples are on unit boundaries - no manual edits required.')
+
+    else:
+
+        # print the code, with some formatting
+        if np.max(boundary_sample_info.index.values) < 10:
+            for index in boundary_sample_info.index.values:
+                print(variable_string + '.loc[' + str(index) + ",'unit'] = " + str(sample_info['unit'][index]))
+
+        elif np.max(boundary_sample_info.index.values) < 100:
+            for index in boundary_sample_info.index.values:
+                if index < 10:
+                    print(variable_string + '.loc[ ' + str(index) + ",'unit'] = " + str(sample_info['unit'][index]))
+                else:
+                    print(variable_string + '.loc[' + str(index) + ",'unit'] = " + str(sample_info['unit'][index]))
+
+        elif np.max(boundary_sample_info.index.values) < 1000:
+            for index in boundary_sample_info.index.values:
+                if index < 10:
+                    print(variable_string + '.loc[  ' + str(index) + ",'unit'] = " + str(sample_info['unit'][index]))
+                elif index < 100:
+                    print(variable_string + '.loc[ ' + str(index) + ",'unit'] = " + str(sample_info['unit'][index]))
+                else:
+                    print(variable_string + '.loc[' + str(index) + ",'unit'] = " + str(sample_info['unit'][index]))
+
+        else:
+            for index in boundary_sample_info.index.values:
+                if index < 10:
+                    print(variable_string + '.loc[   ' + str(index) + ",'unit'] = " + str(sample_info['unit'][index]))
+                elif index < 100:
+                    print(variable_string + '.loc[  ' + str(index) + ",'unit'] = " + str(sample_info['unit'][index]))
+                elif index < 1000:
+                    print(variable_string + '.loc[ ' + str(index) + ",'unit'] = " + str(sample_info['unit'][index]))
+                else:
+                    print(variable_string + '.loc[' + str(index) + ",'unit'] = " + str(sample_info['unit'][index]))
+
+    print('=====')
+
+
+
+
+
+def get_total_thickness():
+    """
+    Returns the total stratigraphic thickness.
+
+    Args:
+        - data (dataframe): properly formatted data
+
+    Returns:
+        - thickness (float): the total stratigraphic thickness
+
+    Notes:
+        Output is rounded to two decimal places.
+    """
+    thickness = np.round(np.sum(data['THICKNESS']),2)
+
+    return thickness
 
 
 
