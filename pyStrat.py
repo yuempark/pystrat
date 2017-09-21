@@ -229,15 +229,85 @@ def plot_legend(formatting):
 
         return fig, ax
 
-    # if they aren't the same... haven't developed this code yet
+    # if they aren't the same...
     else:
-        print('colour_header and width_header are not the same - plot_legend still under development for this case.')
+        # initialize the figure
+        fig, axs = plt.subplots(nrows=1, ncols=4, gridspec_kw={'width_ratios':[1.5,1,1.5,1]})
+
+            # now the widths
+        height_width = 0
+        for i in range(len(formatting.index)):
+
+            # only plot the non-nan cells
+            if pd.notnull(formatting[width_header][i]):
+
+                # get the width and label
+                this_width = formatting['width'][i]
+                this_label = formatting[width_header][i]
+
+                # create the rectangle
+                axs[0].add_patch(patches.Rectangle((0.0,height_width), this_width, 1, facecolor='white', edgecolor='k'))
+
+                # the label
+                axs[1].text(0.1, height_width+0.5, this_label, verticalalignment='center')
+
+                # count the height
+                height_width = height_width + 1
+
+        # prettify the width legend
+        axs[0].set_ylim(0,height_width)
+        axs[1].set_ylim(0,height_width)
+        axs[0].set_yticks([])
+        axs[1].set_yticks([])
+        axs[1].set_xticks([])
+        axs[0].set_title('WIDTH')
+        axs[1].set_title(width_header)
+
+        # first the colours
+        height_colours = 0
+        for i in range(len(formatting.index)):
+
+            # only plot non-nan cells
+            if pd.notnull(formatting[colour_header][i]):
+
+                # get the colour and label
+                this_colour = [formatting['r'][i], formatting['g'][i], formatting['b'][i]]
+                this_label = formatting[colour_header][i]
+
+                # create the rectangle
+                axs[2].add_patch(patches.Rectangle((0.0,height_colours), 1, 1, facecolor=this_colour, edgecolor='k'))
+
+                # the label
+                axs[3].text(0.1, height_colours+0.5, this_label, verticalalignment='center')
+
+                # count the height
+                height_colours = height_colours + 1
+
+        # prettify colour legend
+        axs[2].set_ylim(0,height_colours)
+        axs[3].set_ylim(0,height_colours)
+        axs[2].set_yticks([])
+        axs[3].set_yticks([])
+        axs[2].set_xticks([])
+        axs[3].set_xticks([])
+        axs[2].set_title('COLOUR')
+        axs[3].set_title(colour_header)
+
+        # force the size of the plot
+        ratio = 0.3
+        if height_width > height_colours:
+            fig.set_figheight(height_width * ratio)
+        else:
+            fig.set_figheight(height_colours * ratio)
+        fig.set_figwidth(10)
+
+        return fig, axs
 
 
 
 
 
-def initiate_figure(data, formatting, strat_ratio, figwidth, width_ratios, linewidth=1):
+def initiate_figure(data, formatting, strat_ratio, figwidth, width_ratios, linewidth=1, features=True):
     """
     Initiate a figure with the stratigraphic column.
 
@@ -248,6 +318,7 @@ def initiate_figure(data, formatting, strat_ratio, figwidth, width_ratios, linew
         - figwidth (float): figure width
         - width_ratios (list): width ratios of axes
         - linewidth (float): line width (default = 1)
+        - features (boolean): if True, print feature notes (default = True)
 
     Returns:
         - fig (figure): figure handle
@@ -290,8 +361,9 @@ def initiate_figure(data, formatting, strat_ratio, figwidth, width_ratios, linew
             axs[0].add_patch(patches.Rectangle((0.0,strat_height), this_width, this_thickness, facecolor=this_colour, edgecolor='k', linewidth=linewidth))
 
             # if there are any features to be labelled, label it
-            if pd.notnull(data['FEATURES'][i]):
-                axs[1].text(0.02, strat_height + (this_thickness/2), data['FEATURES'][i], horizontalalignment='left', verticalalignment='center')
+            if features:
+                if pd.notnull(data['FEATURES'][i]):
+                    axs[1].text(0.02, strat_height + (this_thickness/2), data['FEATURES'][i], horizontalalignment='left', verticalalignment='center')
 
             # count the stratigraphic height
             strat_height = strat_height + this_thickness
@@ -308,8 +380,10 @@ def initiate_figure(data, formatting, strat_ratio, figwidth, width_ratios, linew
     axs[0].set_ylabel('stratigraphic height [m]')
     axs[0].set_xticklabels([])
     axs[0].set_xticks([])
-    axs[1].set_xticklabels([])
-    axs[1].set_xticks([])
+
+    if features:
+        axs[1].set_xticklabels([])
+        axs[1].set_xticks([])
 
     return fig, axs
 
