@@ -634,64 +634,86 @@ def get_total_thickness():
 
 
 
-def lowess_fit(y, x, frac=0.6666666666666666, it=3):
+def lowess_fit(height, val, frac=0.6666666666666666, it=3):
     """
     LOWESS fit for a scatterplot.
 
     Args:
-        - y (list or array): data y-values
-        - x (list or array): data x-values
+        - height (list or array): sample heights
+        - val (list or array): sample values
         - frac (float): between 0 and 1 - the fraction of the data used when
                         estimating each y-value
         - it (int): the number of residual-based reweightings to perform
 
     Returns:
-        - xy (array): the first column is the sorted x values and the second
-                      column the associated estimated y-values
+        - height_LOWESS (array): sorted heights
+        - val_LOWESS (array): estimated values
+
+    Notes:
+        - height_LOWESS and val_LOWESS arrays will be sorted by height, and any
+          duplicate values are removed
     """
-    xy = sm.nonparametric.lowess(y, x, frac=frac, it=it)
+    # the LOWESS fit
+    xy_all = sm.nonparametric.lowess(val, height, frac=frac, it=it)
 
-    return xy
+    # remove duplicate values
+    height_LOWESS = np.array([xy_all[0,0]])
+    val_LOWESS = np.array([xy_all[0,1]])
+    for i in range(1,len(xy_all)):
+        if xy_all[i,0] != xy_all[i-1,0]:
+            height_LOWESS = np.append(height_LOWESS, xy_all[i,0])
+            val_LOWESS = np.append(val_LOWESS, xy_all[i,1])
+
+    return height_LOWESS, val_LOWESS
 
 
 
 
 
-def lowess_normalize(strat_height, vals, frac=0.6666666666666666, it=3):
+def lowess_normalize(height, val, frac=0.6666666666666666, it=3):
     """
     Normalize values to the LOWESS fit.
 
     Args:
-        - strat_height (list or array): stratigraphic heights of samples
-        - vals (list or array): values of samples
+        - height (list or array): sample heights
+        - val (list or array): sample values
         - frac (float): between 0 and 1 - the fraction of the data used when
                         estimating each y-value in the lowess fit
         - it (int): the number of residual-based reweightings to perform
 
     Returns:
-        - xy (array): the first column is the sorted x values and the second
-                       column the associated estimated y-values
-        - norm_vals (array): normalized values
-        - norm_heights (array): associated height values
+        - height_LOWESS (array): sorted heights
+        - val_LOWESS (array): estimated values
+        - val_norm (array): normalized values
+
+    Notes:
+        - height_LOWESS and val_LOWESS arrays will be sorted by height, and any
+          duplicate values are removed
+        - val_norm will match the input val array - order and NaN's will be
+          preserved
     """
-    # combine strat_height and d13C into a dataframe
-    section_data = pd.DataFrame({'strat_height':strat_height, 'vals':vals})
+    # do the LOWESS fit
+    height_LOWESS, val_LOWESS = lowess_fit(height, val, frac, it)
 
-    # pull out the non-nan values
-    finite_vals = np.array([])
-    norm_heights = np.array([])
-    for i in range(len(section_data.index)):
-        if np.isfinite(section_data['vals'][i]):
-            finite_vals = np.append(finite_vals, section_data['vals'][i])
-            norm_heights = np.append(norm_heights, section_data['strat_height'][i])
-
-    # the lowess fit
-    xy = lowess_fit(finite_vals, norm_heights, frac, it)
+    # remove index on input arrays, if there are any
+    temp_height = np.array([])
+    temp_val = np.array([])
+    for height_i in height:
+        temp_height = np.append(temp_height, height_i)
+    for val_i in val:
+        temp_val = np.append(temp_val, val_i)
+    height = temp_height
+    val = temp_val
 
     # normalize
-    norm_vals = finite_vals - xy[:,1]
+    val_norm = np.array([])
+    for i in range(len(height)):
+        for j in range(len(height_LOWESS)):
+            if height[i] == height_LOWESS[j]:
+                val_norm = np.append(val_norm, val[i] - val_LOWESS[j])
 
-    return xy, norm_vals, norm_heights
+    return height_LOWESS, val_LOWESS, val_norm
+
 
 
 
