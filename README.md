@@ -1,6 +1,6 @@
 # pystrat
 
-<img src="pystrat_logo.png" width="100" height="100">
+<img src="images/pystrat_logo.png" width="100" height="100">
 
 A tool for stratigraphic plotting in Python.
 
