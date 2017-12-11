@@ -495,7 +495,7 @@ def sample_curate(data, recorded_height, remarks):
         Properly formatted data.
     recorded_height : array_like
         Recorded height of samples.
-    remarks : array_like
+    remarks : list
         Field addition errors noted as "ADD X" or "SUB X" in the remarks array,
         and only need to be noted at the first sample where the correction comes
         into effect.
@@ -1419,3 +1419,123 @@ def calculate_stratigraphic_thickness_csv(csv_string):
         data.loc[i,'HEIGHT'] = round(data['R'][i] * math.cos(math.radians(data['angle'][i])), 1)
 
     return data
+
+
+
+
+
+def distance_to_units(data, sample_height, units, unit_header):
+    """
+    Calculate the closest stratigraphic distance of each sample to a set of units.
+
+    Parameters
+    ----------
+    data : dataframe
+        Properly formatted data.
+    sample_height : array_like
+        Sample heights.
+    units : list
+        List of units to which the closest stratigraphic distance will be
+        calculated.
+    unit_header : string
+        The header of the column in 'data' in which to find the units in
+        'units'.
+
+    Returns
+    -------
+    d : array
+        The closest stratigraphic distance of each sample to the set of units.
+
+    Notes
+    -----
+    If a sample is on the boundary between a non-specified unit and a specified
+    unit, it gets d = 0.01.
+    """
+    # create arrays that store the start and end of the specified units
+    units_start = np.array([])
+    units_end = np.array([])
+    strat_height = 0.0
+
+    for i in range(len(data.index)):
+        if pd.notnull(data['THICKNESS'][i]):
+            this_thickness = data['THICKNESS'][i]
+            if data[unit_header][i] in units:
+                units_start = np.append(units_start, strat_height)
+                units_end = np.append(units_end, np.round(strat_height + this_thickness, 2))
+            strat_height = np.round(strat_height + this_thickness, 2)
+        else:
+            break
+
+    # initiate output column
+    d = np.array([])
+
+    if len(units_start)!=0:
+        # iterate through the samples
+        for i in range(len(sample_height)):
+            if pd.notnull(sample_height[i]):
+
+                # special case for when the sample is below the first specified unit
+                if sample_height[i]<=units_start[0]:
+
+                    # get the distance to the specified unit (if it's on the boundary, give it 1cm)
+                    min_d = units_start[0] - sample_height[i]
+                    if min_d == 0:
+                        d = np.append(d, 0.01)
+                    else:
+                        d = np.append(d, min_d)
+
+                # special case for when the sample is above the last specified unit
+                elif sample_height[i]>=units_end[-1]:
+
+                    # get the distance to the specified unit (if it's on the boundary, give it 1cm)
+                    min_d = sample_height[i] - units_end[-1]
+                    if min_d == 0:
+                        d = np.append(d, 0.01)
+                    else:
+                        d = np.append(d, min_d)
+
+                # special case for then the sample is within the last specified unit
+                elif sample_height[i]>units_start[-1] and sample_height[i]<units_end[-1]:
+                        d = np.append(d, 0.0)
+
+                else:
+                    # iterate through the specified units
+                    for j in range(len(units_start)-1):
+
+                        # if the sample is from within the specified unit
+                        if sample_height[i]>units_start[j] and sample_height[i]<units_end[j]:
+                            d = np.append(d, 0.0)
+
+                            break
+
+                        # stop when we are sandwiched between two specified units
+                        elif sample_height[i]>=units_end[j] and sample_height[i]<=units_start[j+1]:
+
+                            # get the distance to the two units
+                            bot_d = sample_height[i] - units_end[j]
+                            top_d = units_start[j+1] - sample_height[i]
+
+                            # select the smaller of the two
+                            if bot_d < top_d:
+                                min_d = bot_d
+                            else:
+                                min_d = top_d
+
+                            if min_d == 0:
+                                d = np.append(d, 0.01)
+                            else:
+                                d = np.append(d, min_d)
+
+
+                            break
+
+            else:
+                break
+
+    # the case where there are no specified units in the section
+    else:
+        for i in range(len(sample_height)):
+            if pd.notnull(sample_height[i]):
+                d = np.append(d, np.inf)
+
+    return d
