@@ -785,12 +785,15 @@ def lowess_normalize(height, val, frac=0.6666666666666666, it=3):
     height = temp_height
     val = temp_val
 
-    # normalize
+    # normalize, accounting for NaNs
     val_norm = np.array([])
     for i in range(len(height)):
-        for j in range(len(height_LOWESS)):
-            if height[i] == height_LOWESS[j]:
-                val_norm = np.append(val_norm, val[i] - val_LOWESS[j])
+        if np.isfinite(val[i]):
+            for j in range(len(height_LOWESS)):
+                if height[i] == height_LOWESS[j]:
+                    val_norm = np.append(val_norm, val[i] - val_LOWESS[j])
+        else:
+            val_norm = np.append(val_norm, val[i])
 
     return height_LOWESS, val_LOWESS, val_norm
 
