@@ -1264,29 +1264,98 @@ def fisher_mean(data):
 
 
 
-def cover_calculator(csv_string):
+def calculate_stratigraphic_thickness(lat, lon, elev, strike, dip):
     """
-    Calculate a stratigraphic thickness between the two points.
+    Calculate a stratigraphic thickness between two points.
 
     Parameters
     ----------
-        - csv_string : string
-            Path to covers .csv, with the proper formatting.
+    lat : tuple
+        Start and end latitude, in decimal degrees.
+    lon : tuple
+        Start and end longitude, in decimal degrees.
+    elev : tuple
+        Start and end elevation, in metres.
+    strike : tuple
+        Start and end strike, in decimal degrees.
+    dip : tuple
+        Start and end dip, in decimal degrees.
 
     Returns
     -------
-    None.
+    d : float
+        Calculated stratigraphic thickness.
+    """
+    # vincenty distance, converted from km to m
+    s = vincenty_inverse((lat[0],lon[0]), (lat[1],lon[1]))
+    s = s * 1000
+
+    # compass bearing
+    bearing = compass_bearing((lat[0],lon[0]), (lat[1],lon[1]))
+
+    # first convert strike to dip direction
+    dip_dir = ((strike[0]+90)%360, (strike[1]+90)%360)
+
+    # convert dip direction and dip of bedding to a pole (perpendicular to bedding) trend and plunge
+    pole_trend = ((dip_dir[0]+180)%360, (dip_dir[1]+180)%360)
+    pole_plunge = (90-dip[0], 90-dip[1])
+
+    # get the mean pole
+    di_block = [[pole_trend[0],pole_plunge[0]], [pole_trend[1],pole_plunge[1]]]
+    fpars = fisher_mean(di_block)
+    mean_pole_trend = fpars['dec']
+    mean_pole_plunge = fpars['inc']
+
+    # convert back to mean dip direction and dip
+    mean_dip_dir = (mean_pole_trend + 180) % 360
+    mean_dip = 90 - mean_pole_plunge
+
+    # distance perpendicular to strike
+    perp_s = s * math.cos(math.radians(abs(mean_dip_dir - bearing)))
+
+    # elevation difference
+    d_elev = elev[1] - elev[0]
+
+    # true perpendicular distance (accounting for elevation)
+    R = math.sqrt(d_elev**2 + perp_s**2)
+
+    # absolute inclination between the adjusted points
+    inclination = math.degrees(math.atan(d_elev / perp_s))
+
+    # the inclination from the line between the adjusted points
+    if d_elev > 0:
+        angle = 90 - inclination - mean_dip
+    else:
+        angle = 90 - mean_dip + inclination
+
+    # the stratigraphic height
+    d = R * math.cos(math.radians(angle))
+
+    return d
+
+
+
+
+
+def calculate_stratigraphic_thickness_csv(csv_string):
+    """
+    Calculate a stratigraphic thickness between two points from a .csv.
+
+    Parameters
+    ----------
+    csv_string : string
+        Path to covers .csv, with the proper formatting.
+
+    Returns
+    -------
+    data : dataframe
+        Dataframe with calculated fields.
 
     Notes
     -----
     Input .csv must follow the format of the given template,
     'covers_template.csv', and include: latitude (decimal degrees), longitude
     (decimal degrees), elevation (m), strike of bedding (RHR), dip of bedding
-
-    Saves results to a .csv with name: csv_string + '_calculated.csv'
-
-    Example to run from the command line:
-    >> python -c 'import pyStrat; pyStrat.cover_calculator("Users/yuempark/Documents/Hongzixi_covers.csv")'
     """
 
     # read in the data
@@ -1346,5 +1415,4 @@ def cover_calculator(csv_string):
         # the stratigraphic height
         data.loc[i,'HEIGHT'] = round(data['R'][i] * math.cos(math.radians(data['angle'][i])), 1)
 
-    # save the .csv
-    data.to_csv(csv_string + '_calculated.csv', index=False)
+    return data
