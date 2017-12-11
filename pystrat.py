@@ -22,24 +22,26 @@ def read_data(csv_string):
     """
     Imports data from a .csv.
 
-    Args:
-        - csv_string (string): path to data .csv
+    Parameters
+    ----------
+    csv_string : string
+        Path to data .csv.
 
-    Returns:
-        - data (dataframe): properly formatted data
+    Returns
+    -------
+    data : dataframe
+        Properly formatted data.
 
-    Notes:
-        The .csv must follow the form of the template (adapted from the Matstrat
-        template):
-        - lines 1-4 can be filled with arbitrary relevant information - the code
-          will start reading in data at line 5
-        - Lithofacies:
-            - line 5 MUST contain at least two headers
-            - one of these headers MUST be named 'THICKNESS'
-            - one of these headers MUST be named 'FEATURES'
-            - other columns may be named whatever the user desires
-        - Samples:
-            - optional
+    Notes
+    -----
+    The .csv must follow the form of the template.
+
+    Lines 1-4 can be filled with arbitrary relevant information - the code will
+    start reading in data at line 5.
+
+    Line 5 MUST contain at least two headers: one of these headers MUST be named
+    'THICKNESS', and one of these headers MUST be named 'FEATURES'. Other
+    columns may be named whatever the user desires.
     """
     # the data
     data = pd.read_csv(csv_string, header=4)
@@ -62,27 +64,30 @@ def read_formatting(csv_string):
     """
     Imports formatting from a .csv.
 
-    Args:
-        - csv_string (string): path to formatting .csv
+    Parameters
+    ----------
+    csv_string : string
+        Path to formatting .csv.
 
-    Returns:
-        - formatting (dataframe): properly formatted formatting
+    Returns
+    -------
+    formatting : dataframe
+        Properly formatted formatting.
 
-    Notes:
-        The .csv must follow the form of the template:
-        - columns 1-4 are used to set the colour of the boxes:
-            - columns 1-3 must be called 'r', 'g', and 'b' (for red, green, and
-              blue)
-                - values in columns 1-3 must be between 0-255
-            - the header of column 4 must match one of the headers used in the
-              data .csv, and all values in the data must be a subset of the
-              values in this column
-        - columns 6-7 are used to set the width of the boxes:
-            - column 6 must be called 'width'
-            - the header of column 7 must match one of the headers used in the
-              data .csv, and all values in the data must be a subset of the
-              values in this column
-        - column 5 should be left blank for readability
+    Notes
+    -----
+    The .csv must follow the form of the template.
+
+    Columns 1-4 are used to set the colour of the boxes: columns 1-3 must be
+    called 'r', 'g', and 'b' (for red, green, and blue), and values in columns
+    1-3 must be between 0-255. The header of column 4 must match one of the
+    headers used in the data .csv, and all values in the data must be a subset
+    of the values in this column.
+
+    Columns 6-7 are used to set the width of the boxes: column 6 must be called
+    'width'. The header of column 7 must match one of the headers used in the
+    data .csv, and all values in the data must be a subset of the values in this
+    column. Column 5 should be left blank for readability.
     """
     # the formatting
     formatting = pd.read_csv(csv_string)
@@ -108,13 +113,21 @@ def integrity_check(data, formatting):
     """
     Check that values in the data are a subset of values in the formatting.
 
-    Args:
-        - data (dataframe): properly formatted data
-        - formatting (dataframe): properly formatted formatting
+    Parameters
+    ----------
+    data : dataframe
+        Properly formatted data.
+    formatting : dataframe
+        Properly formatted formatting.
 
-    Raises:
-        Prints result of integrity check. If fail, also prints the item which
-        fails the check.
+    Returns
+    -------
+    None.
+
+    Notes
+    -----
+    Prints result of integrity check. If fail, also prints the item which fails
+    the check.
     """
     # get the colour and width headers being used
     colour_header = formatting.columns[3]
@@ -169,12 +182,17 @@ def plot_legend(formatting):
     """
     Plot all items in the formatting.
 
-    Args:
-        - formatting (dataframe): properly formatted formatting
+    Parameters
+    ----------
+    formatting : dataframe
+        Properly formatted formatting.
 
-    Returns:
-        - fig (figure): figure handle
-        - ax (axis): axis handle
+    Returns
+    -------
+    fig : figure
+        Figure handle.
+    ax : axis
+        Axis handles.
     """
     # get the colour and width headers being used
     colour_header = formatting.columns[3]
@@ -232,7 +250,7 @@ def plot_legend(formatting):
     # if they aren't the same...
     else:
         # initialize the figure
-        fig, axs = plt.subplots(nrows=1, ncols=4, gridspec_kw={'width_ratios':[1.5,1,1.5,1]})
+        fig, ax = plt.subplots(nrows=1, ncols=4, gridspec_kw={'width_ratios':[1.5,1,1.5,1]})
 
             # now the widths
         height_width = 0
@@ -246,22 +264,22 @@ def plot_legend(formatting):
                 this_label = formatting[width_header][i]
 
                 # create the rectangle
-                axs[0].add_patch(patches.Rectangle((0.0,height_width), this_width, 1, facecolor='white', edgecolor='k'))
+                ax[0].add_patch(patches.Rectangle((0.0,height_width), this_width, 1, facecolor='white', edgecolor='k'))
 
                 # the label
-                axs[1].text(0.1, height_width+0.5, this_label, verticalalignment='center')
+                ax[1].text(0.1, height_width+0.5, this_label, verticalalignment='center')
 
                 # count the height
                 height_width = height_width + 1
 
         # prettify the width legend
-        axs[0].set_ylim(0,height_width)
-        axs[1].set_ylim(0,height_width)
-        axs[0].set_yticks([])
-        axs[1].set_yticks([])
-        axs[1].set_xticks([])
-        axs[0].set_title('WIDTH')
-        axs[1].set_title(width_header)
+        ax[0].set_ylim(0,height_width)
+        ax[1].set_ylim(0,height_width)
+        ax[0].set_yticks([])
+        ax[1].set_yticks([])
+        ax[1].set_xticks([])
+        ax[0].set_title('WIDTH')
+        ax[1].set_title(width_header)
 
         # first the colours
         height_colours = 0
@@ -275,23 +293,23 @@ def plot_legend(formatting):
                 this_label = formatting[colour_header][i]
 
                 # create the rectangle
-                axs[2].add_patch(patches.Rectangle((0.0,height_colours), 1, 1, facecolor=this_colour, edgecolor='k'))
+                ax[2].add_patch(patches.Rectangle((0.0,height_colours), 1, 1, facecolor=this_colour, edgecolor='k'))
 
                 # the label
-                axs[3].text(0.1, height_colours+0.5, this_label, verticalalignment='center')
+                ax[3].text(0.1, height_colours+0.5, this_label, verticalalignment='center')
 
                 # count the height
                 height_colours = height_colours + 1
 
         # prettify colour legend
-        axs[2].set_ylim(0,height_colours)
-        axs[3].set_ylim(0,height_colours)
-        axs[2].set_yticks([])
-        axs[3].set_yticks([])
-        axs[2].set_xticks([])
-        axs[3].set_xticks([])
-        axs[2].set_title('COLOUR')
-        axs[3].set_title(colour_header)
+        ax[2].set_ylim(0,height_colours)
+        ax[3].set_ylim(0,height_colours)
+        ax[2].set_yticks([])
+        ax[3].set_yticks([])
+        ax[2].set_xticks([])
+        ax[3].set_xticks([])
+        ax[2].set_title('COLOUR')
+        ax[3].set_title(colour_header)
 
         # force the size of the plot
         ratio = 0.3
@@ -301,7 +319,7 @@ def plot_legend(formatting):
             fig.set_figheight(height_colours * ratio)
         fig.set_figwidth(10)
 
-        return fig, axs
+        return fig, ax
 
 
 
@@ -311,24 +329,37 @@ def initiate_figure(data, formatting, strat_ratio, figwidth, width_ratios, linew
     """
     Initiate a figure with the stratigraphic column.
 
-    Args:
-        - data (dataframe): properly formatted data
-        - formatting (dataframe): properly formatted formatting
-        - strat_ratio (float): scaling ratio for height of figure
-        - figwidth (float): figure width
-        - width_ratios (list): width ratios of axes
-        - linewidth (float): line width (default = 1)
-        - features (boolean): if True, print feature notes (default = True)
+    Parameters
+    ----------
+    data : dataframe
+        Properly formatted data.
+    formatting : dataframe
+        Properly formatted formatting.
+    strat_ratio : float or int
+        Scaling ratio for height of figure. If used for a different
+        stratigraphic column, they will have the same scale.
+    figwidth : float or int
+        Figure width.
+    width_ratios : array_like
+        Width ratios of axes. The number of elements in this array_like defines
+        the number of axes.
+    linewidth : float or int, optional
+        Line width (default = 1).
+    features : boolean, optional
+        If True, print feature notes (default = True).
 
-    Returns:
-        - fig (figure): figure handle
-        - axs (axes): axes handles
+    Returns
+    -------
+    fig : figure
+        Figure handle.
+    ax : axis
+        Axis handles.
     """
     # get the number of axes from the width_ratios list
     ncols = len(width_ratios)
 
-    # initiate fig and axs
-    fig, axs = plt.subplots(nrows=1, ncols=ncols, sharey=True, gridspec_kw={'width_ratios':width_ratios})
+    # initiate fig and ax
+    fig, ax = plt.subplots(nrows=1, ncols=ncols, sharey=True, gridspec_kw={'width_ratios':width_ratios})
 
     # get the colour and width headers being used
     colour_header = formatting.columns[3]
@@ -358,59 +389,74 @@ def initiate_figure(data, formatting, strat_ratio, figwidth, width_ratios, linew
                     this_width = formatting['width'][j]
 
             # create the rectangle
-            axs[0].add_patch(patches.Rectangle((0.0,strat_height), this_width, this_thickness, facecolor=this_colour, edgecolor='k', linewidth=linewidth))
+            ax[0].add_patch(patches.Rectangle((0.0,strat_height), this_width, this_thickness, facecolor=this_colour, edgecolor='k', linewidth=linewidth))
 
             # if there are any features to be labelled, label it
             if features:
                 if pd.notnull(data['FEATURES'][i]):
-                    axs[1].text(0.02, strat_height + (this_thickness/2), data['FEATURES'][i], horizontalalignment='left', verticalalignment='center')
+                    ax[1].text(0.02, strat_height + (this_thickness/2), data['FEATURES'][i], horizontalalignment='left', verticalalignment='center')
 
             # count the stratigraphic height
             strat_height = strat_height + this_thickness
 
     # force the limits on the lithostratigraphy plot
-    axs[0].set_xlim([0,1])
-    axs[0].set_ylim([0,strat_height])
+    ax[0].set_xlim([0,1])
+    ax[0].set_ylim([0,strat_height])
 
     # force the size of the plot
     fig.set_figheight(strat_height * strat_ratio)
     fig.set_figwidth(figwidth)
 
     # prettify
-    axs[0].set_ylabel('stratigraphic height [m]')
-    axs[0].set_xticklabels([])
-    axs[0].set_xticks([])
+    ax[0].set_ylabel('stratigraphic height [m]')
+    ax[0].set_xticklabels([])
+    ax[0].set_xticks([])
 
     if features:
-        axs[1].set_xticklabels([])
-        axs[1].set_xticks([])
+        ax[1].set_xticklabels([])
+        ax[1].set_xticks([])
 
-    return fig, axs
-
-
+    return fig, ax
 
 
 
-def add_data_axis(fig, axs, ax_num, x, y, plot_type, **kwargs):
+
+
+def add_data_axis(fig, ax, ax_num, x, y, plot_type, **kwargs):
     """
     Add an arbitrary data axis to a figure initiated by initiate_figure.
 
-    Args:
-        - fig (figure): figure handle initiated by initiate_figure
-        - axs (axes): axes handles initiated by initiate_figure
-        - ax_num (float): axis on which to plot
-        - x (list or array): x-data
-        - y (list or array): y-data
-        - plot_type (string): 'plot', 'scatter', or 'barh'
-        - **kwargs: passed to plt.plot, plt.scatter, or plt.barh
+    Parameters
+    ----------
+    fig : figure
+        Figure handle initiated by initiate_figure.
+    ax : axis
+        Axis handles initiated by initiate_figure.
+    ax_num : int
+        Axis on which to plot.
+    x : array_like
+        x-data.
+    y : array_like
+        y-data.
+    plot_type : string
+        'plot', 'scatter', or 'barh'.
 
-    Notes:
-        If 'barh' is selected, it is recommended that a 'height' kwarg be passed
-        to this function (see the documentation for matplotlib.pyplot.barh).
-        Also, note that 'y' becomes the bottom-left coordinate of the bar.
+    Other Parameters
+    ----------------
+    **kwargs passed to plt.plot, plt.scatter, or plt.barh.
+
+    Returns
+    -------
+    None.
+
+    Notes
+    -----
+    If 'barh' is selected, it is recommended that a 'height' kwarg be passed to
+    this function (see the documentation for matplotlib.pyplot.barh). Also, note
+    that 'y' becomes the bottom-left coordinate of the bar.
     """
     # get the correct axis
-    ax = axs[ax_num]
+    ax = ax[ax_num]
 
     # plot
     if plot_type == 'plot':
@@ -443,35 +489,39 @@ def sample_curate(data, recorded_height, remarks):
     """
     Assigns the correct height and unit to collected samples.
 
-    Args:
-        - data (dataframe): properly formatted data
-        - recorded_height (list or array): recorded height of samples
-        - remarks (list or array): field addition errors noted
+    Parameters
+    ----------
+    data : dataframe
+        Properly formatted data.
+    recorded_height : array_like
+        Recorded height of samples.
+    remarks : array_like
+        Field addition errors noted as "ADD X" or "SUB X" in the remarks array,
+        and only need to be noted at the first sample where the correction comes
+        into effect.
 
-    Returns:
-        - sample_info (dataframe): recorded_height, remarks, height, and unit
+    Returns
+    -------
+    sample_info : dataframe
+        With columns: recorded_height, remarks, height, and unit.
 
-    Notes:
-        Field addition errors should be noted as "ADD X" or "SUB X" in the
-        remarks array, and only need to be noted at the first sample where the
-        correction comes into effect.
+    Notes
+    -----
+    Samples marked with a .5 in the 'unit' column come from unit boundaries.
+    User input is required to assign the correct unit.
 
-        Samples marked with a .5 in the 'unit' column come from unit boundaries.
-        User input is required to assign the correct unit.
+    If the sample comes from the lower unit, subtract 0.5. If the sample comes
+    from the upper unit, add 0.5
 
-        If the sample comes from the lower unit, subtract 0.5
-                                     upper unit,      add 0.5
+    After fixing all changes, copy and paste the dataframe into the data .csv.
 
-        After fixing all changes, copy and paste the dataframe into the data
-        .csv.
+    A useful masking command to only show samples on unit boundaries in jupyter
+    notebook:
 
-        A useful masking command to only show samples on unit boundaries in
-        jupyter notebook:
+    >> mask = (sample_info['unit'] != np.floor(sample_info['unit']))
+    >> sample_info[mask]
 
-            mask = (sample_info['unit'] != np.floor(sample_info['unit']))
-            sample_info[mask]
-
-        Units are zero indexed as in the Python convention.
+    Units are zero indexed.
     """
     # remove nans from the recorded_height array (appended to the end) and corresponding remarks
     no_nans = np.array([])
@@ -542,18 +592,25 @@ def print_unit_edit_code(sample_info, variable_string):
     """
     Prints the code for editing units.
 
-    Args:
-        - sample_info (dataframe): recorded_height, remarks, height, and unit
-        - variable_string (string): string of the variable name for sample_info
+    Parameters
+    ----------
+    sample_info : dataframe
+        With columns: recorded_height, remarks, height, and unit.
+    variable_string : string
+        String of the variable name for sample_info.
 
-    Notes:
-        Copy and paste the printed code into a cell and edit as follows:
+    Returns
+    -------
+    None.
 
-        If the sample comes from the lower unit, subtract 0.5
-                                     upper unit,      add 0.5
+    Notes
+    -----
+    Copy and paste the printed code into a cell and edit as follows:
 
-        After fixing all changes, copy and paste the dataframe into the data
-        .csv.
+    If the sample comes from the lower unit, subtract 0.5. If the sample comes
+    from the upper unit, add 0.5
+
+    After fixing all changes, copy and paste the dataframe into the data .csv.
     """
     # get the samples on unit boundaries
     mask = (sample_info['unit'] != np.floor(sample_info['unit']))
@@ -605,18 +662,23 @@ def print_unit_edit_code(sample_info, variable_string):
 
 
 
-def get_total_thickness():
+def get_total_thickness(data):
     """
     Returns the total stratigraphic thickness.
 
-    Args:
-        - data (dataframe): properly formatted data
+    Parameters
+    ----------
+    data : dataframe
+        Properly formatted data.
 
-    Returns:
-        - thickness (float): the total stratigraphic thickness
+    Returns
+    -------
+    thickness : float
+        The total stratigraphic thickness.
 
-    Notes:
-        Output is rounded to two decimal places.
+    Notes
+    -----
+    Output is rounded to two decimal places.
     """
     thickness = np.round(np.sum(data['THICKNESS']),2)
 
@@ -638,20 +700,29 @@ def lowess_fit(height, val, frac=0.6666666666666666, it=3):
     """
     LOWESS fit for a scatterplot.
 
-    Args:
-        - height (list or array): sample heights
-        - val (list or array): sample values
-        - frac (float): between 0 and 1 - the fraction of the data used when
-                        estimating each y-value
-        - it (int): the number of residual-based reweightings to perform
+    Parameters
+    ----------
+    height : array_like
+        Sample heights.
+    val : array_like
+        Sample values.
+    frac : float, optional
+        Between 0 and 1 - the fraction of the data used when estimating each
+        y-value (default = 0.6666666666666666).
+    it : int, optional
+        The number of residual-based reweightings to perform (default = 3).
 
-    Returns:
-        - height_LOWESS (array): sorted heights
-        - val_LOWESS (array): estimated values
+    Returns
+    -------
+    height_LOWESS : array
+        Sorted heights.
+    val_LOWESS : array
+        Estimated values.
 
-    Notes:
-        - height_LOWESS and val_LOWESS arrays will be sorted by height, and any
-          duplicate values are removed
+    Notes
+    -----
+    height_LOWESS and val_LOWESS arrays will be sorted by height, and any
+    duplicate values are removed.
     """
     # the LOWESS fit
     xy_all = sm.nonparametric.lowess(val, height, frac=frac, it=it)
@@ -674,23 +745,32 @@ def lowess_normalize(height, val, frac=0.6666666666666666, it=3):
     """
     Normalize values to the LOWESS fit.
 
-    Args:
-        - height (list or array): sample heights
-        - val (list or array): sample values
-        - frac (float): between 0 and 1 - the fraction of the data used when
-                        estimating each y-value in the lowess fit
-        - it (int): the number of residual-based reweightings to perform
+    Parameters
+    ----------
+    height : array_like
+        Sample heights.
+    val : array_like
+        Sample values.
+    frac : float, optional
+        Between 0 and 1 - the fraction of the data used when estimating each
+        y-value (default = 0.6666666666666666).
+    it : int, optional
+        The number of residual-based reweightings to perform (default = 3).
 
     Returns:
-        - height_LOWESS (array): sorted heights
-        - val_LOWESS (array): estimated values
-        - val_norm (array): normalized values
+    height_LOWESS : array
+        Sorted heights.
+    val_LOWESS : array
+        Estimated values.
+    val_norm : array
+        Normalized values.
 
-    Notes:
-        - height_LOWESS and val_LOWESS arrays will be sorted by height, and any
-          duplicate values are removed
-        - val_norm will match the input val array - order and NaN's will be
-          preserved
+    Notes
+    -----
+    height_LOWESS and val_LOWESS arrays will be sorted by height, and any
+    duplicate values are removed.
+
+    val_norm will match the input val array - order and NaN's will be preserved.
     """
     # do the LOWESS fit
     height_LOWESS, val_LOWESS = lowess_fit(height, val, frac, it)
@@ -722,26 +802,39 @@ def scatter_variance(strat_height, vals, interval, mode, frac=0.6666666666666666
     """
     Calculate the variance in scatterplot data.
 
-    Args:
-        - strat_height (list or array): stratigraphic heights of samples
-        - vals (list or array): values of samples
-        - interval (float): window height used to calculate variance
-        - mode (string): 'standard' (raw data), 'window_normalized' (windowed
-                         lowess fit subtracted), or 'all_normalized' (lowess fit
-                         subtracted)
-        - frac (float): between 0 and 1 - the fraction of the data used when
-                        estimating each y-value in the lowess fit
-        - it (int): the number of residual-based reweightings to perform
+    Parameters
+    ----------
+    strat_height : array_like
+        Stratigraphic heights of samples.
+    vals : array_like
+        Values of samples.
+    interval : float or int
+        Window height used to calculate variance, in data coordinates.
+    mode : string
+        'standard' (raw data), 'window_normalized' (windowed lowess fit
+        subtracted), or 'all_normalized' (lowess fit subtracted)
+    frac : float, optional
+        Between 0 and 1 - the fraction of the data used when estimating each
+        y-value (default = 0.6666666666666666).
+    it : int, optional
+        The number of residual-based reweightings to perform (default = 3).
 
-    Returns ('standard'):
-        - variances (array): calculated variances
-        - strat_height_mids (array): middle of windows used
+    Returns
+    -------
+    variances : array
+        Calculated variances.
+    strat_height_mids : array
+        Middle of windows used.
 
-    Additional Returns ('normalized'):
-        - xys (array): the first column is the sorted x values and the second
-                       column the associated estimated y-values
-        - norm_vals (array): normalized values
-        - norm_heights (array): associated height values
+    The following are only returned in 'window_normalized' or 'all_normalized'
+    modes.
+    xys : array
+        The first column is the sorted x values and the second column the
+        associated estimated y-values.
+    norm_vals : array
+        Normalized values.
+    norm_heights : array
+        Associated height values.
     """
     # initiate storage arrays
     variances = np.array([])
@@ -847,24 +940,23 @@ def scatter_variance(strat_height, vals, interval, mode, frac=0.6666666666666666
 def vincenty_inverse(point1, point2, miles=False):
     """
     Vincenty's formula (inverse method) to calculate the distance (in
-    kilometers or miles) between two points on the surface of a spheroid
+    kilometers or miles) between two points on the surface of a spheroid.
 
-    Doctests:
-    >>> vincenty((0.0, 0.0), (0.0, 0.0))  # coincident points
-    0.0
-    >>> vincenty((0.0, 0.0), (0.0, 1.0))
-    111.319491
-    >>> vincenty((0.0, 0.0), (1.0, 0.0))
-    110.574389
-    >>> vincenty((0.0, 0.0), (0.5, 179.5))  # slow convergence
-    19936.288579
-    >>> vincenty((0.0, 0.0), (0.5, 179.7))  # failure to converge
-    >>> boston = (42.3541165, -71.0693514)
-    >>> newyork = (40.7791472, -73.9680804)
-    >>> vincenty(boston, newyork)
-    298.396057
-    >>> vincenty(boston, newyork, miles=True)
-    185.414657
+    Parameters
+    ----------
+    point1 : tuple
+        The latitude/longitude for the first point. Latitude and longitude must
+        be in decimal degrees.
+    point2 : tuple
+        The latitude/longitude for the second point. Latitude and longitude must
+        be in decimal degrees.
+    miles : boolean, optional
+        If false, use kilometres (default = False).
+
+    Returns
+    -------
+    d : float
+        Calculated distance.
 
     Source: Maurycy Pietrzak
     """
@@ -940,21 +1032,25 @@ def compass_bearing(pointA, pointB):
     """
     Calculates the bearing between two points.
 
+    Parameters
+    ----------
+    pointA : tuple
+        The latitude/longitude for the first point. Latitude and longitude must
+        be in decimal degrees.
+    pointB : tuple
+        The latitude/longitude for the second point. Latitude and longitude must
+        be in decimal degrees.
+
+    Returns
+    -------
+    compass_bearing : float
+        The bearing in degrees.
+
+    Notes
+    -----
     The formulae used is the following:
         θ = atan2(sin(Δlong).cos(lat2),
                   cos(lat1).sin(lat2) − sin(lat1).cos(lat2).cos(Δlong))
-
-    :Parameters:
-      - `pointA: The tuple representing the latitude/longitude for the
-        first point. Latitude and longitude must be in decimal degrees
-      - `pointB: The tuple representing the latitude/longitude for the
-        second point. Latitude and longitude must be in decimal degrees
-
-    :Returns:
-      The bearing in degrees
-
-    :Returns Type:
-      float
 
     Source: jeromer
     """
@@ -989,14 +1085,19 @@ def dir2cart(data):
     """
     Converts vector directions, in degrees, to cartesian coordinates, in x,y,z.
 
-    Args:
-        - data (array): list of [dec,inc]
+    Parameters
+    ----------
+    data : list
+        List of [dec,inc].
 
-    Returns:
-        - cart (numpy array): array of [x,y,z]
+    Returns
+    -------
+    cart : array
+        Array of [x,y,z].
 
-    Notes:
-        - Adapted from pmag.py
+    Notes
+    -----
+    Adapted from pmag.py.
     """
 
     ints = np.ones(len(data)).transpose() # get an array of ones to plug into dec,inc pairs
@@ -1037,14 +1138,19 @@ def cart2dir(cart):
     """
     Converts cartesian coordinates, in x,y,z, to vector directions.
 
-    Args:
-        - cart (numpy array): array of [x,y,z]
+    Parameters
+    ----------
+    cart : array
+        Array of [x,y,z].
 
-    Returns:
-        - data (array): list of [dec,inc]
+    Returns
+    -------
+    data : list
+        List of [dec,inc].
 
-    Notes:
-        - Adapted from pmag.py
+    Notes
+    -----
+    Adapted from pmag.py.
     """
 
     cart = np.array(cart)
@@ -1089,14 +1195,19 @@ def fisher_mean(data):
     """
     Calculate the Fisher mean.
 
-    Args:
-        - data (array): list of [dec,inc]
+    Parameters
+    ----------
+    data : list
+        List of [dec,inc].
 
-    Returns:
-        - fpars (dictionary): with dec, inc, n, r, k, alpha95, csd
+    Returns
+    -------
+    fpars : dict
+        With dec, inc, n, r, k, alpha95, csd.
 
-    Notes:
-        - Adapted from pmag.py
+    Notes
+    -----
+    Adapted from pmag.py.
     """
 
     N = len(data)
@@ -1157,22 +1268,25 @@ def cover_calculator(csv_string):
     """
     Calculate a stratigraphic thickness between the two points.
 
-    Args:
-        - csv_string (string): path to covers .csv
+    Parameters
+    ----------
+        - csv_string : string
+            Path to covers .csv, with the proper formatting.
 
-    Notes:
-        Input .csv must follow the format of the given template,
-        'covers_template.csv', and include:
-            - latitude (decimal degrees)
-            - longitude (decimal degrees)
-            - elevation (m)
-            - strike of bedding (RHR)
-            - dip of bedding
+    Returns
+    -------
+    None.
 
-        Saves results to a .csv with name: csv_string + '_calculated.csv'
+    Notes
+    -----
+    Input .csv must follow the format of the given template,
+    'covers_template.csv', and include: latitude (decimal degrees), longitude
+    (decimal degrees), elevation (m), strike of bedding (RHR), dip of bedding
 
-        Example to run from the command line:
-        python -c 'import pyStrat; pyStrat.cover_calculator("Users/yuempark/Documents/Hongzixi_covers.csv")'
+    Saves results to a .csv with name: csv_string + '_calculated.csv'
+
+    Example to run from the command line:
+    >> python -c 'import pyStrat; pyStrat.cover_calculator("Users/yuempark/Documents/Hongzixi_covers.csv")'
     """
 
     # read in the data
