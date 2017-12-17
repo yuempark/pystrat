@@ -18,7 +18,7 @@ import statsmodels.api as sm
 
 
 
-def read_data(csv_string):
+def read_data(csv_string, **kwargs):
     """
     Imports data from a .csv.
 
@@ -26,6 +26,8 @@ def read_data(csv_string):
     ----------
     csv_string : string
         Path to data .csv.
+    **kwargs : keyword arguments
+        Keyword arguments fed to pd.read_csv.
 
     Returns
     -------
@@ -44,7 +46,7 @@ def read_data(csv_string):
     columns may be named whatever the user desires.
     """
     # the data
-    data = pd.read_csv(csv_string, header=4)
+    data = pd.read_csv(csv_string, header=4, **kwargs)
 
     # get rid of blank columns
     cols = []
