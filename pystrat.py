@@ -36,17 +36,11 @@ def read_data(csv_string, **kwargs):
 
     Notes
     -----
-    The .csv must follow the form of the template.
-
-    Lines 1-4 can be filled with arbitrary relevant information - the code will
-    start reading in data at line 5.
-
-    Line 5 MUST contain at least two headers: one of these headers MUST be named
-    'THICKNESS', and one of these headers MUST be named 'FEATURES'. Other
-    columns may be named whatever the user desires.
+    The data .csv must contain at least two headers: one of these headers MUST
+    be named 'THICKNESS'. Other columns may be named whatever the user desires.
     """
     # the data
-    data = pd.read_csv(csv_string, header=4, **kwargs)
+    data = pd.read_csv(csv_string, **kwargs)
 
     # get rid of blank columns
     cols = []
