@@ -17,27 +17,20 @@ class Section:
 
     def __init__(self, thicknesses, facies):
         """
-        Initialize the object with the two required attributes.
+        Initialize Section with the two primary attributes.
 
         Parameters
         ----------
         thicknesses : 1d array_like
-            Logged thicknesses of the facies.
+            Thicknesses of the facies. Any NaNs will be automatically
+            removed.
 
         facies : 1d array_like
-            Logged facies.
+            Observed facies. Any NaNs will be automatically removed.
         """
-        # convert from pandas series to arrays if necessary
-        if type(thicknesses) == pd.core.series.Series:
-            thicknesses = thicknesses.values
-        if type(facies) == pd.core.series.Series:
-            facies = facies.values
-
-        # check that the data are 1d
-        if thicknesses.ndim != 1:
-            raise Exception('Thickness data must be 1d.')
-        if facies.ndim != 1:
-            raise Exception('Facies data must be 1d.')
+        # convert to arrays and check the dimensionality
+        thicknesses = attribute_convert_and_check(thicknesses)
+        facies = attribute_convert_and_check(facies)
 
         # check that the thicknesses are numeric
         if thicknesses.dtype == np.object:
@@ -58,7 +51,7 @@ class Section:
                           'sure that this is appropriate for your dataset.')
             facies = facies[~facies_nan_mask]
 
-        # check the length of the thicknesses and facies match
+        # check that the length of the thicknesses and facies match
         n_thicknesses_units = len(thicknesses)
         n_facies_units = len(facies)
         if n_thicknesses_units != n_facies_units:
@@ -75,11 +68,137 @@ class Section:
         self.n_units = n_thicknesses_units
         self.total_thickness = np.sum(thicknesses)
 
-    def add_facies_attribute(self, attribute_name, attribute_data):
+    def add_facies_attribute(self, attribute_name, attribute_values):
         """
-        """
-        setattr(self, attribute_name, attribute_data)
+        Add an attribute that is explicitly tied to the individually
+        measured units.
 
+        This function should only be used to add an attribute which
+        corresponds 1:1 with each measured unit. Typically, such
+        attributes would add additional detail (e.g. grain size or
+        bedforms) to the broad facies description of the unit.
+
+        To add an attribute that is not explicitly tied to the
+        individually measured units (e.g. chemostratigraphic data), use
+        the Data subclass via the method `add_data_attribute()`.
+
+        Parameters
+        ----------
+        attribute_name : string
+            The name of the attribute.
+
+        attribute_values : 1d array_like
+            The attribute values. NaNs are accepted.
+        """
+        # convert to arrays and check the dimensionality
+        attribute_values = attribute_convert_and_check(attribute_values)
+
+        # check that the length of the attribute data matches the number of units
+        n_attribute_units = len(attribute_values)
+        if n_attribute_units != self.n_units:
+            raise Exception('Length of thicknesses and attribute data are not '
+                            'equal.')
+
+        # assign the data to the object
+        setattr(self, attribute_name, attribute_values)
+
+    def add_data_attribute(self, attribute_name, attribute_height, attribute_values):
+        """
+        Add an attribute that is not explicitly tied to the individually
+        measured units, but tied to the cumulative stratigraphic height
+        instead.
+
+        A typical example of such data would be chemostratigraphic data.
+
+        Parameters
+        ----------
+        attribute_name : string
+            The name of the attribute.
+
+        attribute_height : 1d array_like
+            The stratigraphic height at which the attribute were
+            generated.
+
+        attribute_values : 1d array_like
+            The attribute values.
+        """
+        setattr(self, attribute_name, self.Data(attribute_height, attribute_values))
+
+
+    class Data:
+        """
+        A nested class that stores any data not explicitly tied to the
+        individually measured units, but tied to the cumulative
+        stratigraphic height instead.
+
+        A typical example of such data would be chemostratigraphic data.
+        """
+
+        def __init__(self, attribute_height, attribute_values):
+            """
+            Initialize Data with the two primary attributes.
+
+            Parameters
+            ----------
+            attribute_height : 1d array_like
+                The stratigraphic height at which the attribute were
+                generated.
+
+            attribute_values : 1d array_like
+                The attribute values.
+            """
+            # convert to arrays and check the dimensionality
+            attribute_height = attribute_convert_and_check(attribute_height)
+            attribute_values = attribute_convert_and_check(attribute_values)
+
+            # check that the heights are numeric
+            if attribute_height.dtype == np.object:
+                raise Exception('Height data must be floats or ints.')
+
+            # check that the X and Y have the same length
+            n_height = len(attribute_height)
+            n_values = len(attribute_values)
+            if n_height != n_values:
+                raise Exception('Length of X and Y data are not equal.')
+
+            # assign the attributes
+            self.height = attribute_height
+            self.values = attribute_values
+
+            # add some other useful attributes
+            self.n_vals = n_values
+
+        def add_height_attribute():
+            """
+            """
+            pass
+
+def attribute_convert_and_check(attribute):
+    """
+    Convert pandas series to arrays (if necessary) and check that the
+    data are 1d.
+
+    This function assists the addition of attributes to a Section.
+
+    Parameters
+    ----------
+    attribute : 1d array_like
+        The attribute to be added.
+
+    Returns
+    -------
+    attribute : 1d array
+        The attribute after the conversion and check.
+    """
+    # convert from pandas series to arrays if necessary
+    if type(attribute) == pd.core.series.Series:
+        attribute = attribute.values
+
+    # check that the data are 1d
+    if attribute.ndim != 1:
+        raise Exception('Data must be 1d.')
+
+    return attribute
 
 
 ########################################
