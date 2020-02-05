@@ -1,0 +1,15 @@
+FACIES,width
+sts,0.3
+tuff,1
+cover,0.2
+sts-tuff,0.3
+sts-vfss,0.35
+sts-vfss-tuff,0.35
+vfss,0.4
+vfss-tuff,0.4
+sill,1
+pcg,0.7
+ccg,0.8
+fss,0.5
+di,1
+ri,0.4

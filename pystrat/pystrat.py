@@ -1,3 +1,23 @@
+########################################################################
+############################ PACKAGE DESIGN ############################
+########################################################################
+
+# pystrat strives to take advantage of object oriented programming (OOP)
+# by organizing stratigraphic data into classes.
+
+# The core class upon which this package is built is the Section class,
+# which organizes the measured stratigraphic log (i.e. the thicknesses
+# and facies of units).
+
+# Any additional data that is tied to the cumulative stratigraphic
+# height, but not explicitly tied to the individually measured units, is
+# organized in the Data subclass.
+
+# The plotting style for a stratigraphic section is organized in the
+# Style class.
+
+########################################################################
+
 # import standard modules
 import numpy as np
 import pandas as pd
@@ -9,6 +29,10 @@ import math
 import matplotlib.patches as patches
 import statistics
 import statsmodels.api as sm
+
+###############
+### CLASSES ###
+###############
 
 class Section:
     """
@@ -67,6 +91,9 @@ class Section:
         # add some other useful attributes
         self.n_units = n_thicknesses_units
         self.total_thickness = np.sum(thicknesses)
+        self.base_height = np.cumsum(thicknesses) - thicknesses
+        self.unique_facies = np.unique(facies)
+        self.n_unique_facies = len(np.unique(facies))
 
     def add_facies_attribute(self, attribute_name, attribute_values):
         """
@@ -78,9 +105,15 @@ class Section:
         attributes would add additional detail (e.g. grain size or
         bedforms) to the broad facies description of the unit.
 
-        To add an attribute that is not explicitly tied to the
-        individually measured units (e.g. chemostratigraphic data), use
-        the Data subclass via the method `add_data_attribute()`.
+        To add an attribute that is tied to the cumulative stratigraphic
+        height, but not explicitly tied to the individually measured
+        units (e.g. chemostratigraphic data), use the Data subclass via
+        the method `add_data_attribute()`.
+
+        To add an attribute that is neither tied to the cumulative
+        stratigraphic height nor the individually measured units (e.g.
+        the GPS coordinates of the start and end of the section), use
+        `add_generic_attribute()`.
 
         Parameters
         ----------
@@ -102,11 +135,39 @@ class Section:
         # assign the data to the object
         setattr(self, attribute_name, attribute_values)
 
+    def add_generic_attribute(self, attribute_name, attribute_values):
+        """
+        Add an attribute that is neither tied to the cumulative
+        stratigraphic height nor the individually measured units.
+
+        To add an attribute that is explicitly tied to the individually
+        measured units, use `add_facies_attribute()`.
+
+        To add an attribute that is tied to the cumulative stratigraphic
+        height, but not explicitly tied to the individually measured
+        units (e.g. chemostratigraphic data), use the Data subclass via
+        the method `add_data_attribute()`.
+
+        Parameters
+        ----------
+        attribute_name : string
+            The name of the attribute.
+
+        attribute_values : any
+            The attribute values.
+        """
+        # convert from pandas series to arrays if necessary
+        if type(attribute_values) == pd.core.series.Series:
+            attribute_values = attribute.values
+
+        # assign the data to the object
+        setattr(self, attribute_name, attribute_values)
+
     def add_data_attribute(self, attribute_name, attribute_height, attribute_values):
         """
-        Add an attribute that is not explicitly tied to the individually
-        measured units, but tied to the cumulative stratigraphic height
-        instead.
+        Add an attribute that is tied to the cumulative stratigraphic
+        height, but not explicitly tied to the individually measured
+        units.
 
         A typical example of such data would be chemostratigraphic data.
 
@@ -116,7 +177,7 @@ class Section:
             The name of the attribute.
 
         attribute_height : 1d array_like
-            The stratigraphic height at which the attribute were
+            The stratigraphic heights at which the attribute were
             generated.
 
         attribute_values : 1d array_like
@@ -124,12 +185,11 @@ class Section:
         """
         setattr(self, attribute_name, self.Data(attribute_height, attribute_values))
 
-
     class Data:
         """
-        A nested class that stores any data not explicitly tied to the
-        individually measured units, but tied to the cumulative
-        stratigraphic height instead.
+        This nested class stores any data tied to the cumulative
+        stratigraphic height, but not explicitly tied to the
+        individually measured units.
 
         A typical example of such data would be chemostratigraphic data.
         """
@@ -141,7 +201,7 @@ class Section:
             Parameters
             ----------
             attribute_height : 1d array_like
-                The stratigraphic height at which the attribute were
+                The stratigraphic heights at which the attribute were
                 generated.
 
             attribute_values : 1d array_like
@@ -166,19 +226,110 @@ class Section:
             self.values = attribute_values
 
             # add some other useful attributes
-            self.n_vals = n_values
+            self.n_values = n_values
 
-        def add_height_attribute():
+        def add_height_attribute(self, attribute_name, attribute_values):
             """
+            Add an attribute that is tied to the cumulative
+            stratigraphic heights of this instance of Data.
+
+            A typical example would be the sample names associated with
+            a given chemostratigraphic profile.
+
+            Parameters
+            ----------
+            attribute_name : string
+                The name of the attribute.
+
+            attribute_values : 1d array_like
+                The attribute values. NaNs are accepted.
             """
-            pass
+            # convert to arrays and check the dimensionality
+            attribute_values = attribute_convert_and_check(attribute_values)
+
+            # check that the length of the attribute data matches the number of values
+            n_attribute_units = len(attribute_values)
+            if n_attribute_units != self.n_values:
+                raise Exception('Length of heights and attribute data are not '
+                                'equal.')
+
+            # assign the data to the object
+            setattr(self, attribute_name, attribute_values)
+
+class Style():
+    """
+    Organizes the plotting style for the lithostratigraphy.
+    """
+
+    def __init__(self,
+                 color_attribute, color_labels, color_values,
+                 width_attribute, width_labels, width_values):
+        """
+        Initialize Style with the six required attributes.
+
+        Note that compatibility of a Style with a Section is not checked
+        until explicitly called, or plotting is attempted.
+
+        Parameters
+        ----------
+        color_attribute : string
+            Attribute name from which the color labels are derived. When
+            plotting a Section, the Section must have this attribute.
+
+        color_labels : 1d array_like
+            The labels to which colors are assigned. When plotting a
+            Section, a subset of these labels must exist within the
+            color_attribute of that Section.
+
+        color_values : array_like
+            The colors that will be assigned to the associated labels.
+            Values must be interpretable by matplotlib.
+
+        width_attribute : string
+            Attribute name from which the width labels are derived. When
+            plotting a Section, the Section must have this attribute.
+
+        width_labels : 1d array_like
+            The labels to which widths are assigned. When plotting a
+            Section, a subset of these labels must exist within the
+            width_attribute of that Section.
+
+        width_values : 1d array_like of floats
+            The widths that will be assigned to the associated labels.
+            Values must be between 0 and 1.
+        """
+        # convert to arrays and check the dimensionality
+        color_labels = attribute_convert_and_check(color_labels)
+        width_labels = attribute_convert_and_check(width_labels)
+        width_values = attribute_convert_and_check(width_values)
+
+        # check that the widths are between 0 and 1
+        if np.max(width_values)>1 or np.min(width_values)<0:
+            raise Exception('Width values must be floats between 0 and 1.')
+
+        # assign the attributes
+        self.color_attribute = color_attribute
+        self.color_labels = color_labels
+        self.color_values = color_values
+        self.width_attribute = width_attribute
+        self.width_labels = width_labels
+        self.width_values = width_values
+
+        # add some other useful attributes
+        self.n_color_labels = len(color_labels)
+        self.n_width_labels = len(width_labels)
+
+#################
+### FUNCTIONS ###
+#################
 
 def attribute_convert_and_check(attribute):
     """
     Convert pandas series to arrays (if necessary) and check that the
     data are 1d.
 
-    This function assists the addition of attributes to a Section.
+    This function assists the addition of attributes to Section and
+    Data.
 
     Parameters
     ----------
@@ -199,6 +350,11 @@ def attribute_convert_and_check(attribute):
         raise Exception('Data must be 1d.')
 
     return attribute
+
+def section_style_compatibility():
+    """
+    """
+    pass
 
 
 ########################################
