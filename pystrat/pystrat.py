@@ -1,12 +1,84 @@
+# import standard modules
 import numpy as np
-import math
 import pandas as pd
 import matplotlib.pyplot as plt
+
+# import additional modules
+import warnings
+import math
 import matplotlib.patches as patches
 import statistics
 import statsmodels.api as sm
 
+class Section:
+    """
+    Organizes all data associated with a single stratigraphic section.
+    """
 
+    def __init__(self, thicknesses, facies):
+        """
+        Initialize the object with the two required attributes.
+
+        Parameters
+        ----------
+        thicknesses : 1d array_like
+            Logged thicknesses of the facies.
+
+        facies : 1d array_like
+            Logged facies.
+        """
+        # convert from pandas series to arrays if necessary
+        if type(thicknesses) == pd.core.series.Series:
+            thicknesses = thicknesses.values
+        if type(facies) == pd.core.series.Series:
+            facies = facies.values
+
+        # check that the data are 1d
+        if thicknesses.ndim != 1:
+            raise Exception('Thickness data must be 1d.')
+        if facies.ndim != 1:
+            raise Exception('Facies data must be 1d.')
+
+        # check that the thicknesses are numeric
+        if thicknesses.dtype == np.object:
+            raise Exception('Thickness data must be floats or ints.')
+
+        # check for NaNs, and get rid of them
+        thicknesses_nan_mask = np.isnan(thicknesses)
+        if np.sum(thicknesses_nan_mask) > 0:
+            warnings.warn('Thickness data contains NaNs. These rows will be '
+                          'automatically removed, but you should check to make '
+                          'sure that this is appropriate for your dataset.')
+            thicknesses = thicknesses[~thicknesses_nan_mask]
+
+        facies_nan_mask = pd.isnull(facies)
+        if np.sum(facies_nan_mask) > 0:
+            warnings.warn('Facies data contains NaNs. These rows will be '
+                          'automatically removed, but you should check to make '
+                          'sure that this is appropriate for your dataset.')
+            facies = facies[~facies_nan_mask]
+
+        # check the length of the thicknesses and facies match
+        n_thicknesses_units = len(thicknesses)
+        n_facies_units = len(facies)
+        if n_thicknesses_units != n_facies_units:
+            raise Exception('Length of thicknesses and facies data are not '
+                            'equal. If a warning was raised regarding the '
+                            'presence of NaNs in your data, their presence '
+                            'may be the cause of this mismatch.')
+
+        # assign the core data to attributes
+        self.thicknesses = thicknesses
+        self.facies = facies
+
+        # add some other useful attributes
+        self.n_units = n_thicknesses_units
+        self.total_thickness = np.sum(thicknesses)
+
+    def add_facies_attribute(self, attribute_name, attribute_data):
+        """
+        """
+        setattr(self, attribute_name, attribute_data)
 
 
 
