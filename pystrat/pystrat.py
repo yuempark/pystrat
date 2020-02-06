@@ -278,8 +278,8 @@ class Style():
 
         color_labels : 1d array_like
             The labels to which colors are assigned. When plotting a
-            Section, a subset of these labels must exist within the
-            color_attribute of that Section.
+            Section, values within the color_attribute of that Section
+            must form a subset of the values within this array_like.
 
         color_values : array_like
             The colors that will be assigned to the associated labels.
@@ -291,8 +291,8 @@ class Style():
 
         width_labels : 1d array_like
             The labels to which widths are assigned. When plotting a
-            Section, a subset of these labels must exist within the
-            width_attribute of that Section.
+            Section, values within the width_attribute of that Section
+            must form a subset of the values within this array_like.
 
         width_values : 1d array_like of floats
             The widths that will be assigned to the associated labels.
@@ -302,6 +302,12 @@ class Style():
         color_labels = attribute_convert_and_check(color_labels)
         width_labels = attribute_convert_and_check(width_labels)
         width_values = attribute_convert_and_check(width_values)
+
+        # convert from pandas series/dataframes to arrays if necessary
+        if type(color_values) == pd.core.series.Series:
+            color_values = color_values.values
+        if type(color_values) == pd.core.frame.DataFrame:
+            color_values = color_values.values
 
         # check that the widths are between 0 and 1
         if np.max(width_values)>1 or np.min(width_values)<0:
@@ -351,10 +357,57 @@ def attribute_convert_and_check(attribute):
 
     return attribute
 
-def section_style_compatibility():
+def section_style_compatibility(section, style):
     """
+    Check that a `Section` and `Style` are compatible.
+
+    Parameters
+    ----------
+    section : Section
+        A Section object.
+
+    style : Style
+        A Style object.
     """
-    pass
+    # get the attributes - implicitly checks if the attributes exist
+    color_attribute = getattr(section, style.color_attribute)
+    width_attribute = getattr(section, style.width_attribute)
+
+    # store failed labels
+    color_failed = []
+    width_failed = []
+
+    all_check = True
+
+    # loop over values in the Section
+    for i in range(section.n_units):
+        color_check = False
+        width_check = False
+
+        # check to see if the value is in Style
+        for j in range(style.n_color_labels):
+            if color_attribute[i] == style.color_labels[j]:
+                color_check = True
+        for j in range(style.n_width_labels):
+            if width_attribute[i] == style.width_labels[j]:
+                width_check = True
+
+        # only print warning if the check fails for the first time
+        if color_check == False:
+            if color_attribute[i] not in color_failed:
+                print('Color label in Section but not Style: ' + str(color_attribute[i]))
+                color_failed.append(color_attribute[i])
+            all_check = False
+        if width_check == False:
+            if width_attribute[i] not in width_failed:
+                print('Width label in Section but not Style: ' + str(width_attribute[i]))
+                width_failed.append(width_attribute[i])
+            all_check = False
+
+    # print an all clear statement if the check passes
+    if all_check:
+        print('Section and Style are compatible.')
+
 
 
 ########################################
