@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 # import additional modules
 import warnings
 import math
-import matplotlib.patches as patches
+from matplotlib.patches import Rectangle
 import statistics
 import statsmodels.api as sm
 
@@ -401,6 +401,166 @@ class Style():
         self.n_color_labels = len(color_labels)
         self.n_width_labels = len(width_labels)
 
+    def plot_legend(self):
+        """
+        Plot a legend for this Style object.
+
+        If the color and width labels are the same, a single legend will
+        be created. Otherwise, two legends will be created - one with
+        the color labels, and the other with the width labels.
+
+        Parameters
+        ----------
+        None.
+
+        Returns
+        -------
+        fig : matplotlib Figure
+            Figure handle.
+
+        ax : matplotlib Axes
+            Axis handle.
+        """
+        # extract attributes
+        color_labels = self.color_labels
+        width_labels = self.width_labels
+        color_values = self.color_values
+        width_values = self.width_values
+
+        # if the color and width labels are different
+        if np.any(~(color_labels == width_labels)):
+
+            # sort the widths
+            width_sort_inds = np.argsort(width_values)
+            width_labels = width_labels[width_sort_inds]
+            width_values = width_values[width_sort_inds]
+
+            # initialize the figure
+            fig, ax = plt.subplots(nrows=1, ncols=2, sharey=True,
+                                   gridspec_kw={'width_ratios':[0.3,1]})
+
+            # plot the colors
+            strat_height_colors = 0
+
+            for i in range(len(color_labels)):
+
+                # create the rectangle - with thickness of 1
+                ax[0].add_patch(Rectangle((0.0,strat_height_colors), 1,
+                                          1, facecolor=color_values[i], edgecolor='k'))
+
+                # label the unit
+                ax[0].text(1.1, strat_height_colors+0.5, color_labels[i],
+                           horizontalalignment='left', verticalalignment='center')
+
+                # count the height
+                strat_height_colors = strat_height_colors + 1
+
+            # set the limits
+            ax[0].set_xlim(0,1)
+
+            # prettify
+            ax[0].set_xticks([])
+            ax[0].set_yticklabels([])
+            ax[0].set_yticks([])
+
+            # plot the widths
+            strat_height_widths = 0
+
+            for i in range(len(width_labels)):
+
+                # create the rectangle
+                ax[1].add_patch(Rectangle((0.0,strat_height_widths), width_values[i],
+                                          1, facecolor='grey', edgecolor='k'))
+
+                # the label
+                ax[1].text(1.04, strat_height_widths+0.5, width_labels[i],
+                           horizontalalignment='left', verticalalignment='center')
+
+                # count the height
+                strat_height_widths = strat_height_widths + 1
+
+            # set the limits
+            ax[1].set_xlim(0,1)
+
+            # prettify
+            ax[1].set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1])
+            ax[1].set_axisbelow(True)
+            ax[1].xaxis.grid(ls='--')
+            ax[1].set_yticklabels([])
+            ax[1].set_yticks([])
+            ax[1].spines['top'].set_visible(False)
+            ax[1].spines['right'].set_visible(False)
+
+            # turning the spines off creates some clipping mask issues
+            # so just turn the clipping masks off
+            for obj in fig.findobj():
+                obj.set_clip_on(False)
+
+            # set the size of the plot
+            if strat_height_widths > strat_height_colors:
+                ax[1].set_ylim(0, strat_height_widths)
+                fig.set_figheight(strat_height_widths * 0.4)
+            else:
+                ax[1].set_ylim(0, strat_height_colors)
+                fig.set_figheight(strat_height_colors * 0.4)
+            fig.set_figwidth(4.0)
+
+            plt.subplots_adjust(wspace=2)
+
+        # if the color and width labels are the same
+        else:
+
+            # sort by width
+            width_sort_inds = np.argsort(width_values)
+            color_labels = color_labels[width_sort_inds]
+            width_labels = width_labels[width_sort_inds]
+            color_values = color_values[width_sort_inds]
+            width_values = width_values[width_sort_inds]
+
+            # initiate fig and ax
+            fig, ax = plt.subplots()
+
+            # initiate counting of the stratigraphic height
+            strat_height = 0
+
+            # loop over each item
+            for i in range(len(color_labels)):
+
+                # create the rectangle - with thickness of 1
+                ax.add_patch(Rectangle((0.0,strat_height), width_values[i],
+                                       1, facecolor=color_values[i], edgecolor='k'))
+
+                # label the unit
+                ax.text(1.04, strat_height+0.5, color_labels[i],
+                        horizontalalignment='left', verticalalignment='center')
+
+                # count the stratigraphic height
+                strat_height = strat_height + 1
+
+            # set the limits
+            ax.set_xlim(0,1)
+            ax.set_ylim(0,strat_height)
+
+            # set the size of the plot
+            fig.set_figheight(strat_height * 0.4)
+            fig.set_figwidth(1.5)
+
+            # prettify
+            ax.set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1])
+            ax.set_axisbelow(True)
+            ax.xaxis.grid(ls='--')
+            ax.set_yticklabels([])
+            ax.set_yticks([])
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+
+            # turning the spines off creates some clipping mask issues
+            # so just turn the clipping masks off
+            for obj in fig.findobj():
+                obj.set_clip_on(False)
+
+        return fig, ax
+
 #################
 ### FUNCTIONS ###
 #################
@@ -489,166 +649,6 @@ def section_style_compatibility(section, style):
 ########################################
 ########## PLOTTING FUNCTIONS ##########
 ########################################
-
-
-
-
-
-def read_data(csv_string, **kwargs):
-    """
-    Imports data from a .csv.
-
-    Parameters
-    ----------
-    csv_string : string
-        Path to data .csv.
-    **kwargs : keyword arguments
-        Keyword arguments fed to pd.read_csv.
-
-    Returns
-    -------
-    data : dataframe
-        Properly formatted data.
-
-    Notes
-    -----
-    The data .csv must contain at least two headers: one of these headers MUST
-    be named 'THICKNESS'. Other columns may be named whatever the user desires.
-    """
-    # the data
-    data = pd.read_csv(csv_string, **kwargs)
-
-    # get rid of blank columns
-    cols = []
-    for c in data.columns:
-        if 'Unnamed' not in c:
-            cols.append(c)
-    data = data[cols]
-
-    # return the dataframe
-    return data
-
-
-
-
-
-def read_formatting(csv_string):
-    """
-    Imports formatting from a .csv.
-
-    Parameters
-    ----------
-    csv_string : string
-        Path to formatting .csv.
-
-    Returns
-    -------
-    formatting : dataframe
-        Properly formatted formatting.
-
-    Notes
-    -----
-    The .csv must follow the form of the template.
-
-    Columns 1-4 are used to set the colour of the boxes: columns 1-3 must be
-    called 'r', 'g', and 'b' (for red, green, and blue), and values in columns
-    1-3 must be between 0-255. The header of column 4 must match one of the
-    headers used in the data .csv, and all values in the data must be a subset
-    of the values in this column.
-
-    Columns 6-7 are used to set the width of the boxes: column 6 must be called
-    'width'. The header of column 7 must match one of the headers used in the
-    data .csv, and all values in the data must be a subset of the values in this
-    column. Column 5 should be left blank for readability.
-    """
-    # the formatting
-    formatting = pd.read_csv(csv_string)
-
-    # convert rgb to 0-1 scale for plotting
-    for i in range(len(formatting.index)):
-        formatting.loc[i,'r'] = formatting.loc[i,'r'] / 255
-        formatting.loc[i,'g'] = formatting.loc[i,'g'] / 255
-        formatting.loc[i,'b'] = formatting.loc[i,'b'] / 255
-
-    # get the colour and width headers being used
-    colour_header = formatting.columns[3]
-    width_header = formatting.columns[6]
-
-    # return the dataframe
-    return formatting
-
-
-
-
-
-def integrity_check(data, formatting):
-    """
-    Check that values in the data are a subset of values in the formatting.
-
-    Parameters
-    ----------
-    data : dataframe
-        Properly formatted data.
-    formatting : dataframe
-        Properly formatted formatting.
-
-    Returns
-    -------
-    None.
-
-    Notes
-    -----
-    Prints result of integrity check. If fail, also prints the item which fails
-    the check.
-    """
-    # get the colour and width headers being used
-    colour_header = formatting.columns[3]
-    width_header = formatting.columns[6]
-
-    # if width_header and colour_header are the same, pandas appends a '.1'
-    if width_header.endswith('.1'):
-        width_header = width_header[:-2]
-
-    # failed items
-    colour_failed = []
-    width_failed = []
-
-    all_check = True
-
-    # loop over values in the data
-    for i in range(len(data.index)):
-        colour_check = False
-        width_check = False
-
-        # only check if the value is not nan
-        if pd.notnull(data['THICKNESS'][i]):
-
-            # check to see if specified value is in the formatting table
-            for j in range(len(formatting.index)):
-                if data[colour_header][i] == formatting[colour_header][j]:
-                    colour_check = True
-                if data[width_header][i] == formatting[width_header][j]:
-                    width_check = True
-
-            # only print warning if the check fails for the first time
-            if colour_check == False:
-                if data[colour_header][i] not in colour_failed:
-                    print('Colour check failed for item ' + str(data[colour_header][i]) + '.')
-                    colour_failed.append(data[colour_header][i])
-                all_check = False
-            if width_check == False:
-                if data[width_header][i] not in width_failed:
-                    print('Width check failed for item ' + str(data[width_header][i]) + '.')
-                    width_failed.append(data[width_header][i])
-                all_check = False
-
-    # print an all clear statement if the check passes
-    if all_check:
-        print('Colour and width check passed.')
-
-
-
-
 
 def plot_legend(formatting):
     """
