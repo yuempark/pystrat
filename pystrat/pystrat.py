@@ -88,17 +88,26 @@ class Section:
         self.thicknesses = thicknesses
         self.facies = facies
 
-        # add some other useful attributes
+        # add some other facies attributes
+        self.base_height = np.cumsum(thicknesses) - thicknesses
+        self.unit_number = np.arange(n_thicknesses_units)
+
+        # add some generic attributes
         self.n_units = n_thicknesses_units
         self.total_thickness = np.sum(thicknesses)
-        self.base_height = np.cumsum(thicknesses) - thicknesses
         self.unique_facies = np.unique(facies)
         self.n_unique_facies = len(np.unique(facies))
 
+        # keep track of attributes
+        self.facies_attributes = ['unit_number','thicknesses','base_height','facies']
+        self.generic_attributes = ['n_units','total_thickness','unique_facies',
+                                   'n_unique_facies']
+        self.data_attributes = []
+
     def add_facies_attribute(self, attribute_name, attribute_values):
         """
-        Add an attribute that is explicitly tied to the individually
-        measured units.
+        Add an attribute that is explicitly tied to the stratigraphic
+        units.
 
         This function should only be used to add an attribute which
         corresponds 1:1 with each measured unit. Typically, such
@@ -106,13 +115,13 @@ class Section:
         bedforms) to the broad facies description of the unit.
 
         To add an attribute that is tied to the cumulative stratigraphic
-        height, but not explicitly tied to the individually measured
-        units (e.g. chemostratigraphic data), use the Data subclass via
-        the method `add_data_attribute()`.
+        height, but not explicitly tied to the stratigraphic units (e.g.
+        chemostratigraphic data), use the Data subclass via the method
+        `add_data_attribute()`.
 
         To add an attribute that is neither tied to the cumulative
-        stratigraphic height nor the individually measured units (e.g.
-        the GPS coordinates of the start and end of the section), use
+        stratigraphic height nor the stratigraphic units (e.g. the GPS
+        coordinates of the start and end of the section), use
         `add_generic_attribute()`.
 
         Parameters
@@ -135,18 +144,45 @@ class Section:
         # assign the data to the object
         setattr(self, attribute_name, attribute_values)
 
+        # keep track of the attribute
+        facies_attributes = self.facies_attributes
+        facies_attributes.append(attribute_name)
+        setattr(self, 'facies_attributes', facies_attributes)
+
+    def return_facies_dataframe(self):
+        """
+        Return a Pandas DataFrame of all attributes associated with the
+        stratigraphic units.
+
+        Parameters
+        ----------
+        None.
+
+        Returns
+        -------
+        df : DataFrame
+            Pandas DataFrame with all attributes associated with the
+            stratigraphic units.
+        """
+        df = pd.DataFrame({'unit_number':np.arange(self.n_units)})
+
+        for attribute in self.facies_attributes:
+            df[attribute] = getattr(self, attribute)
+
+        return df
+
     def add_generic_attribute(self, attribute_name, attribute_values):
         """
         Add an attribute that is neither tied to the cumulative
-        stratigraphic height nor the individually measured units.
+        stratigraphic height nor the stratigraphic units.
 
-        To add an attribute that is explicitly tied to the individually
-        measured units, use `add_facies_attribute()`.
+        To add an attribute that is explicitly tied to the stratigraphic
+        units, use `add_facies_attribute()`.
 
         To add an attribute that is tied to the cumulative stratigraphic
-        height, but not explicitly tied to the individually measured
-        units (e.g. chemostratigraphic data), use the Data subclass via
-        the method `add_data_attribute()`.
+        height, but not explicitly tied to the stratigraphic units (e.g.
+        chemostratigraphic data), use the Data subclass via the method
+        `add_data_attribute()`.
 
         Parameters
         ----------
@@ -163,11 +199,15 @@ class Section:
         # assign the data to the object
         setattr(self, attribute_name, attribute_values)
 
+        # keep track of the attribute
+        generic_attributes = self.generic_attributes
+        generic_attributes.append(attribute_name)
+        setattr(self, 'generic_attributes', generic_attributes)
+
     def add_data_attribute(self, attribute_name, attribute_height, attribute_values):
         """
         Add an attribute that is tied to the cumulative stratigraphic
-        height, but not explicitly tied to the individually measured
-        units.
+        height, but not explicitly tied to the stratigraphic units.
 
         A typical example of such data would be chemostratigraphic data.
 
@@ -185,11 +225,16 @@ class Section:
         """
         setattr(self, attribute_name, self.Data(attribute_height, attribute_values))
 
+        # keep track of the attribute
+        data_attributes = self.data_attributes
+        data_attributes.append(attribute_name)
+        setattr(self, 'data_attributes', data_attributes)
+
     class Data:
         """
         This nested class stores any data tied to the cumulative
         stratigraphic height, but not explicitly tied to the
-        individually measured units.
+        stratigraphic units.
 
         A typical example of such data would be chemostratigraphic data.
         """
@@ -228,6 +273,10 @@ class Section:
             # add some other useful attributes
             self.n_values = n_values
 
+            # keep track of attributes
+            self.height_attributes = ['height','values']
+            self.generic_attributes = ['n_values']
+
         def add_height_attribute(self, attribute_name, attribute_values):
             """
             Add an attribute that is tied to the cumulative
@@ -255,6 +304,33 @@ class Section:
 
             # assign the data to the object
             setattr(self, attribute_name, attribute_values)
+
+            # keep track of the attribute
+            height_attributes = self.height_attributes
+            height_attributes.append(attribute_name)
+            setattr(self, 'height_attributes', height_attributes)
+
+        def return_data_dataframe(self):
+            """
+            Return a Pandas DataFrame of all attributes associated with
+            this Data object.
+
+            Parameters
+            ----------
+            None.
+
+            Returns
+            -------
+            df : DataFrame
+                Pandas DataFrame with all attributes associated with
+                this Data object,
+            """
+            df = pd.DataFrame({'height':self.height})
+
+            for attribute in self.height_attributes:
+                df[attribute] = getattr(self, attribute)
+
+            return df
 
 class Style():
     """
