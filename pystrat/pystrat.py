@@ -9,9 +9,9 @@
 # which organizes the measured stratigraphic log (i.e. the thicknesses
 # and facies of units).
 
-# Any additional data that is tied to the cumulative stratigraphic
-# height, but not explicitly tied to the individually measured units, is
-# organized in the Data subclass.
+# Any additional data that is tied to the stratigraphic height, but not
+# explicitly tied to the individually measured units, is organized in
+# the Data subclass.
 
 # The plotting style for a stratigraphic section is organized in the
 # Style class.
@@ -25,8 +25,10 @@ import matplotlib.pyplot as plt
 
 # import additional modules
 import warnings
-import math
 from matplotlib.patches import Rectangle
+from mpl_toolkits.axes_grid1 import Divider, Size
+
+import math
 import statistics
 import statsmodels.api as sm
 
@@ -114,14 +116,14 @@ class Section:
         attributes would add additional detail (e.g. grain size or
         bedforms) to the broad facies description of the unit.
 
-        To add an attribute that is tied to the cumulative stratigraphic
-        height, but not explicitly tied to the stratigraphic units (e.g.
+        To add an attribute that is tied to the stratigraphic height,
+        but not explicitly tied to the stratigraphic units (e.g.
         chemostratigraphic data), use the Data subclass via the method
         `add_data_attribute()`.
 
-        To add an attribute that is neither tied to the cumulative
-        stratigraphic height nor the stratigraphic units (e.g. the GPS
-        coordinates of the start and end of the section), use
+        To add an attribute that is neither tied to the stratigraphic
+        height nor the stratigraphic units (e.g. the GPS coordinates of
+        the start and end of the section), use
         `add_generic_attribute()`.
 
         Parameters
@@ -173,14 +175,14 @@ class Section:
 
     def add_generic_attribute(self, attribute_name, attribute_values):
         """
-        Add an attribute that is neither tied to the cumulative
-        stratigraphic height nor the stratigraphic units.
+        Add an attribute that is neither tied to the stratigraphic
+        height nor the stratigraphic units.
 
         To add an attribute that is explicitly tied to the stratigraphic
         units, use `add_facies_attribute()`.
 
-        To add an attribute that is tied to the cumulative stratigraphic
-        height, but not explicitly tied to the stratigraphic units (e.g.
+        To add an attribute that is tied to the stratigraphic height,
+        but not explicitly tied to the stratigraphic units (e.g.
         chemostratigraphic data), use the Data subclass via the method
         `add_data_attribute()`.
 
@@ -206,8 +208,8 @@ class Section:
 
     def add_data_attribute(self, attribute_name, attribute_height, attribute_values):
         """
-        Add an attribute that is tied to the cumulative stratigraphic
-        height, but not explicitly tied to the stratigraphic units.
+        Add an attribute that is tied to the stratigraphic height, but
+        not explicitly tied to the stratigraphic units.
 
         A typical example of such data would be chemostratigraphic data.
 
@@ -232,9 +234,8 @@ class Section:
 
     class Data:
         """
-        This nested class stores any data tied to the cumulative
-        stratigraphic height, but not explicitly tied to the
-        stratigraphic units.
+        This nested class stores any data tied to the stratigraphic
+        height, but not explicitly tied to the stratigraphic units.
 
         A typical example of such data would be chemostratigraphic data.
         """
@@ -279,8 +280,8 @@ class Section:
 
         def add_height_attribute(self, attribute_name, attribute_values):
             """
-            Add an attribute that is tied to the cumulative
-            stratigraphic heights of this instance of Data.
+            Add an attribute that is tied to the stratigraphic heights
+            of this instance of Data.
 
             A typical example would be the sample names associated with
             a given chemostratigraphic profile.
@@ -339,9 +340,10 @@ class Style():
 
     def __init__(self,
                  color_attribute, color_labels, color_values,
-                 width_attribute, width_labels, width_values):
+                 width_attribute, width_labels, width_values,
+                 height_scaling_factor, width_inches):
         """
-        Initialize Style with the six required attributes.
+        Initialize Style with the seven required attributes.
 
         Note that compatibility of a Style with a Section is not checked
         until explicitly called, or plotting is attempted.
@@ -373,6 +375,15 @@ class Style():
         width_values : 1d array_like of floats
             The widths that will be assigned to the associated labels.
             Values must be between 0 and 1.
+
+        height_scaling_factor : float
+            When plotting, the height of the section will have a height
+            in inches that is:
+                Section.total_thickness * Style.height_scaling_factor
+
+        width_inches : float
+            When plotting, a width value of 1 will be this many inches
+            wide.
         """
         # convert to arrays and check the dimensionality
         color_labels = attribute_convert_and_check(color_labels)
@@ -396,12 +407,14 @@ class Style():
         self.width_attribute = width_attribute
         self.width_labels = width_labels
         self.width_values = width_values
+        self.height_scaling_factor = height_scaling_factor
+        self.width_inches = width_inches
 
         # add some other useful attributes
         self.n_color_labels = len(color_labels)
         self.n_width_labels = len(width_labels)
 
-    def plot_legend(self):
+    def plot_legend(self, legend_unit_height=0.25):
         """
         Plot a legend for this Style object.
 
@@ -411,7 +424,9 @@ class Style():
 
         Parameters
         ----------
-        None.
+        legend_unit_height : float
+            A scaling factor to modify the height of each unit in the
+            legend only.
 
         Returns
         -------
@@ -421,6 +436,10 @@ class Style():
         ax : matplotlib Axes
             Axis handle.
         """
+        # print some plotting values
+        print('stratigraphic height scaling : 1 inch = 1 distance unit * {}'.format(self.height_scaling_factor))
+        print('width value of 1 will be     : {} inches'.format(self.width_inches))
+
         # extract attributes
         color_labels = self.color_labels
         width_labels = self.width_labels
@@ -436,8 +455,17 @@ class Style():
             width_values = width_values[width_sort_inds]
 
             # initialize the figure
-            fig, ax = plt.subplots(nrows=1, ncols=2, sharey=True,
-                                   gridspec_kw={'width_ratios':[0.3,1]})
+            fig, ax = plt.subplots(nrows=1, ncols=2, sharey=True)
+
+            # determine the axis height and limits first
+            if self.n_color_labels > self.n_width_labels:
+                ax_height = legend_unit_height * self.n_color_labels
+                ax[0].set_ylim(0, self.n_color_labels)
+                ax[1].set_ylim(0, self.n_color_labels)
+            else:
+                ax_height = legend_unit_height * self.n_width_labels
+                ax[0].set_ylim(0, self.n_width_labels)
+                ax[1].set_ylim(0, self.n_width_labels)
 
             # plot the colors
             strat_height_colors = 0
@@ -449,11 +477,20 @@ class Style():
                                           1, facecolor=color_values[i], edgecolor='k'))
 
                 # label the unit
-                ax[0].text(1.1, strat_height_colors+0.5, color_labels[i],
+                ax[0].text(1.2, strat_height_colors+0.5, color_labels[i],
                            horizontalalignment='left', verticalalignment='center')
 
                 # count the height
                 strat_height_colors = strat_height_colors + 1
+
+            # set the axis dimensions (values below are all in inches)
+            ax0_lower_left_x = 0.5
+            ax0_lower_left_y = 0.5
+            ax0_width = 0.5
+            h = [Size.Fixed(ax0_lower_left_x), Size.Fixed(ax0_width)]
+            v = [Size.Fixed(ax0_lower_left_y), Size.Fixed(ax_height)]
+            divider = Divider(fig, (0.0, 0.0, 1., 1.), h, v, aspect=False)
+            ax[0].set_axes_locator(divider.new_locator(nx=1, ny=1))
 
             # set the limits
             ax[0].set_xlim(0,1)
@@ -473,17 +510,30 @@ class Style():
                                           1, facecolor='grey', edgecolor='k'))
 
                 # the label
-                ax[1].text(1.04, strat_height_widths+0.5, width_labels[i],
+                ax[1].text(1.1, strat_height_widths+0.5, width_labels[i],
                            horizontalalignment='left', verticalalignment='center')
 
                 # count the height
                 strat_height_widths = strat_height_widths + 1
+
+            # set the axis dimensions (values below are all in inches)
+            ax1_lower_left_x = ax0_lower_left_x + ax0_width + 2
+            ax1_lower_left_y = ax0_lower_left_y
+            ax1_width = self.width_inches
+            h = [Size.Fixed(ax1_lower_left_x), Size.Fixed(ax1_width)]
+            v = [Size.Fixed(ax1_lower_left_y), Size.Fixed(ax_height)]
+            divider = Divider(fig, (0.0, 0.0, 1., 1.), h, v, aspect=False)
+            ax[1].set_axes_locator(divider.new_locator(nx=1, ny=1))
 
             # set the limits
             ax[1].set_xlim(0,1)
 
             # prettify
             ax[1].set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1])
+            for label in ax[1].get_xticklabels():
+                label.set_rotation(270)
+                label.set_ha('center')
+                label.set_va('top')
             ax[1].set_axisbelow(True)
             ax[1].xaxis.grid(ls='--')
             ax[1].set_yticklabels([])
@@ -496,16 +546,10 @@ class Style():
             for obj in fig.findobj():
                 obj.set_clip_on(False)
 
-            # set the size of the plot
-            if strat_height_widths > strat_height_colors:
-                ax[1].set_ylim(0, strat_height_widths)
-                fig.set_figheight(strat_height_widths * 0.4)
-            else:
-                ax[1].set_ylim(0, strat_height_colors)
-                fig.set_figheight(strat_height_colors * 0.4)
-            fig.set_figwidth(4.0)
-
-            plt.subplots_adjust(wspace=2)
+            # not really necessary since the axis sizes are already
+            # forced, but we may as well set the figsize here too
+            fig.set_size_inches(ax1_lower_left_x + ax1_width + ax0_lower_left_x,
+                                ax1_lower_left_y*2 + ax_height)
 
         # if the color and width labels are the same
         else:
@@ -520,6 +564,10 @@ class Style():
             # initiate fig and ax
             fig, ax = plt.subplots()
 
+            # determine the axis height and limits first
+            ax_height = legend_unit_height * self.n_color_labels
+            ax.set_ylim(0, self.n_color_labels)
+
             # initiate counting of the stratigraphic height
             strat_height = 0
 
@@ -531,22 +579,31 @@ class Style():
                                        1, facecolor=color_values[i], edgecolor='k'))
 
                 # label the unit
-                ax.text(1.04, strat_height+0.5, color_labels[i],
+                ax.text(1.1, strat_height+0.5, color_labels[i],
                         horizontalalignment='left', verticalalignment='center')
 
                 # count the stratigraphic height
                 strat_height = strat_height + 1
 
+            # set the axis dimensions (values below are all in inches)
+            ax_lower_left_x = 0.5
+            ax_lower_left_y = 0.5
+            ax_width = self.width_inches
+            h = [Size.Fixed(ax_lower_left_x), Size.Fixed(ax_width)]
+            v = [Size.Fixed(ax_lower_left_y), Size.Fixed(ax_height)]
+            divider = Divider(fig, (0.0, 0.0, 1., 1.), h, v, aspect=False)
+            ax.set_axes_locator(divider.new_locator(nx=1, ny=1))
+
             # set the limits
             ax.set_xlim(0,1)
             ax.set_ylim(0,strat_height)
 
-            # set the size of the plot
-            fig.set_figheight(strat_height * 0.4)
-            fig.set_figwidth(1.5)
-
             # prettify
             ax.set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1])
+            for label in ax.get_xticklabels():
+                label.set_rotation(270)
+                label.set_ha('center')
+                label.set_va('top')
             ax.set_axisbelow(True)
             ax.xaxis.grid(ls='--')
             ax.set_yticklabels([])
@@ -558,6 +615,11 @@ class Style():
             # so just turn the clipping masks off
             for obj in fig.findobj():
                 obj.set_clip_on(False)
+
+            # not really necessary since the axis sizes are already
+            # forced, but we may as well set the figsize here too
+            fig.set_size_inches(ax_lower_left_x*2 + ax_width,
+                                ax_lower_left_y*2 + ax_height)
 
         return fig, ax
 
@@ -644,154 +706,68 @@ def section_style_compatibility(section, style):
     if all_check:
         print('Section and Style are compatible.')
 
+def plot_section(section, style, ax):
+    """
+    Plot a `Section` with a given `Style` on a given axis.
+
+    Parameters
+    ----------
+    section : Section
+        A Section object.
+
+    style : Style
+        A Style object.
+
+    ax : matplotlib axes
+    """
+    # initiate counting of the stratigraphic height
+    strat_height = 0.0
+
+    # loop over elements of the data
+    for i in range(len(section.thicknesses)):
+
+        # find the colour and width to be used
+        for j in range(len(style.color_labels)):
+            if data[colour_header][i] == formatting[colour_header][j]:
+                this_colour = [formatting['r'][j], formatting['g'][j], formatting['b'][j]]
+            if data[width_header][i] == formatting[width_header][j]:
+                this_width = formatting['width'][j]
+
+        # create the rectangle
+        ax[0].add_patch(patches.Rectangle((0.0,strat_height), this_width, this_thickness, facecolor=this_colour, edgecolor='k', linewidth=linewidth))
+
+        # if there are any features to be labelled, label it
+        if features:
+            if pd.notnull(data['FEATURES'][i]):
+                ax[1].text(0.02, strat_height + (this_thickness/2), data['FEATURES'][i], horizontalalignment='left', verticalalignment='center')
+
+        # count the stratigraphic height
+        strat_height = strat_height + this_thickness
+
+    # force the limits on the lithostratigraphy plot
+    ax[0].set_xlim([0,1])
+    ax[0].set_ylim([0,strat_height])
+
+    # force the size of the plot
+    fig.set_figheight(strat_height * strat_ratio)
+    fig.set_figwidth(figwidth)
+
+    # prettify
+    ax[0].set_ylabel('stratigraphic height [m]')
+    ax[0].set_xticklabels([])
+    ax[0].set_xticks([])
+
+    if features:
+        ax[1].set_xticklabels([])
+        ax[1].set_xticks([])
+
+    return fig, ax
+
 
 
 ########################################
 ########## PLOTTING FUNCTIONS ##########
 ########################################
-
-def plot_legend(formatting):
-    """
-    Plot all items in the formatting.
-
-    Parameters
-    ----------
-    formatting : dataframe
-        Properly formatted formatting.
-
-    Returns
-    -------
-    fig : figure
-        Figure handle.
-    ax : axis
-        Axis handles.
-    """
-    # get the colour and width headers being used
-    colour_header = formatting.columns[3]
-    width_header = formatting.columns[6]
-
-    # if width_header and colour_header are the same, pandas appends a '.1'
-    if width_header.endswith('.1'):
-        width_header = width_header[:-2]
-
-    # if the colour and width headers are the same...
-    if colour_header == width_header:
-
-        # sort the formatting
-        formatting = formatting.copy()
-        formatting.sort_values('width', inplace=True)
-        formatting.reset_index(inplace=True, drop=True)
-
-        # initiate fig and ax
-        fig, ax = plt.subplots()
-
-        # initiate counting of the stratigraphic height
-        strat_height = 0.0
-
-        # loop over each item
-        for i in range(len(formatting.index)):
-            this_colour = [formatting['r'][i], formatting['g'][i], formatting['b'][i]]
-            this_width = formatting['width'][i]
-
-            # create the rectangle - with thickness of 1
-            ax.add_patch(patches.Rectangle((0.0,strat_height), this_width, 1, facecolor=this_colour, edgecolor='k'))
-
-            # label the unit
-            ax.text(0.02, strat_height+0.5, formatting[colour_header][i], horizontalalignment='left', verticalalignment='center')
-
-            # count the stratigraphic height
-            strat_height = strat_height + 1
-
-        # force the limits on the lithostratigraphy plot
-        ax.set_xlim([0,1])
-        ax.set_ylim([0,strat_height])
-
-        # force the size of the plot
-        fig.set_figheight(strat_height * 0.3)
-        fig.set_figwidth(3)
-
-        # prettify
-        ax.set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1])
-        ax.set_axisbelow(True)
-        ax.xaxis.grid()
-        ax.set_yticklabels([])
-        ax.set_yticks([])
-
-        return fig, ax
-
-    # if they aren't the same...
-    else:
-        # initialize the figure
-        fig, ax = plt.subplots(nrows=1, ncols=4, gridspec_kw={'width_ratios':[1.5,1,1.5,1]})
-
-            # now the widths
-        height_width = 0
-        for i in range(len(formatting.index)):
-
-            # only plot the non-nan cells
-            if pd.notnull(formatting[width_header][i]):
-
-                # get the width and label
-                this_width = formatting['width'][i]
-                this_label = formatting[width_header][i]
-
-                # create the rectangle
-                ax[0].add_patch(patches.Rectangle((0.0,height_width), this_width, 1, facecolor='white', edgecolor='k'))
-
-                # the label
-                ax[1].text(0.1, height_width+0.5, this_label, verticalalignment='center')
-
-                # count the height
-                height_width = height_width + 1
-
-        # prettify the width legend
-        ax[0].set_ylim(0,height_width)
-        ax[1].set_ylim(0,height_width)
-        ax[0].set_yticks([])
-        ax[1].set_yticks([])
-        ax[1].set_xticks([])
-        ax[0].set_title('WIDTH')
-        ax[1].set_title(width_header)
-
-        # first the colours
-        height_colours = 0
-        for i in range(len(formatting.index)):
-
-            # only plot non-nan cells
-            if pd.notnull(formatting[colour_header][i]):
-
-                # get the colour and label
-                this_colour = [formatting['r'][i], formatting['g'][i], formatting['b'][i]]
-                this_label = formatting[colour_header][i]
-
-                # create the rectangle
-                ax[2].add_patch(patches.Rectangle((0.0,height_colours), 1, 1, facecolor=this_colour, edgecolor='k'))
-
-                # the label
-                ax[3].text(0.1, height_colours+0.5, this_label, verticalalignment='center')
-
-                # count the height
-                height_colours = height_colours + 1
-
-        # prettify colour legend
-        ax[2].set_ylim(0,height_colours)
-        ax[3].set_ylim(0,height_colours)
-        ax[2].set_yticks([])
-        ax[3].set_yticks([])
-        ax[2].set_xticks([])
-        ax[3].set_xticks([])
-        ax[2].set_title('COLOUR')
-        ax[3].set_title(colour_header)
-
-        # force the size of the plot
-        ratio = 0.3
-        if height_width > height_colours:
-            fig.set_figheight(height_width * ratio)
-        else:
-            fig.set_figheight(height_colours * ratio)
-        fig.set_figwidth(10)
-
-        return fig, ax
 
 
 
