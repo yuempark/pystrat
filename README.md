@@ -49,6 +49,22 @@ export PYTHONPATH=$PYTHONPATH:<path/to/directory>/pystrat
 
 A tutorial on how to use the main features of *pystrat* are included in `pystrat-tutorial.ipynb`.
 
+## Stay up to Date
+
+To get the current version of the package:
+
+1. Change the current working directory to the location where you installed *pystrat*:
+
+```
+cd <path/to/directory/>
+```
+
+2. Copy, paste, and execute the following:
+
+```
+git pull
+```
+
 ## Contributing
 
 We can make *pystrat* better - feel free to [raise an issue](https://github.com/yuempark/pystrat/issues) or [make a pull request](https://github.com/yuempark/pystrat/pulls)!
