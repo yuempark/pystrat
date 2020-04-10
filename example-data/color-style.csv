@@ -1,14 +1,13 @@
 COLOR,r,g,b
-purple,200,134,210
-tuff,255,211,220
 cover,255,255,255
-green,43,182,115
-purple-green,130,170,255
-beige,255,242,185
-brick red,231,60,73
-black,0,0,0
-brick red-green,80,120,200
-swatch,255,0,255
-grey,147,149,152
-sill,0,110,0
-orange,251,176,64
+grainstone,248,169,85
+intraclast breccia,200,100,255
+marl,119,136,187
+marl-ribbonite,119,136,187
+recrystallized,255,222,189
+recrystallized-siltstone,119,136,187
+ribbonite,56,134,198
+ribbonite-grainstone,56,134,198
+ribbonite-siltstone,119,136,187
+siltstone-fine sandstone,139,139,139
+stromatolite,13,175,75
