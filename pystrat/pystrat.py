@@ -28,10 +28,6 @@ import warnings
 from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1 import Divider, Size
 
-import math
-import statistics
-import statsmodels.api as sm
-
 ###############
 ### CLASSES ###
 ###############
