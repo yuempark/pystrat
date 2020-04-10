@@ -2,27 +2,29 @@
 
 <img src="images/pystrat_logo.png" width="100" height="100">
 
-A tool for stratigraphic plotting in Python.
+A tool for stratigraphic plotting in Python 3.
+
+*pystrat* seeks to make the plotting of stratigraphic data reproducible and simple.
 
 ## Installation
 
+*pystrat* will eventually be available for download on [PyPI](https://pypi.org), but until that time, please follow the instructions below.
+
 ### Using the Terminal
 
-1. Click `Clone or download` above.
+1. Open Terminal.
 
-2. Copy the clone URL for the repository.
-
-3. Open Terminal.
-
-4. Change the current working directory to the location where you want the cloned directory to be made.
-
-5. Type `git clone`, and then paste the URL you copied in Step 2:
+2. Change the current working directory to the location where you want the cloned directory to be made.
 
 ```
-git clone https://github.com/example/example
+cd <path/to/directory/>
 ```
 
-6. Press Enter. Your local clone will be created.
+3. Copy, paste, and execute the following:
+
+```
+git clone https://github.com/yuempark/pystrat.git
+```
 
 ### Using GitHub Desktop
 
@@ -32,12 +34,21 @@ git clone https://github.com/example/example
 
 3. Follow the prompts in GitHub Desktop to complete the clone.
 
+### Setting the Path
+
+* If you'd like to be able to import this package into code anywhere on your computer, you will need to open your `.bash_profile` or `.bashrc` and add the following:
+
+```
+export PATH=$PATH:<path/to/directory>/pystrat
+export PYTHONPATH=$PYTHONPATH:<path/to/directory>/pystrat
+```
+
+* If you don't want to mess with your `.bash_profile` or `.bashrc`, just make sure that your code is in the same directory as `pystrat-tutorial.ipynb`.
+
 ## Usage
 
-All functions are in `pystrat.py`.
+A tutorial on how to use the main features of *pystrat* are included in `pystrat-tutorial.ipynb`.
 
-Example usage of main features are included in `pystrat_MWE.ipynb`.
+## Contributing
 
-The user is encouraged to read the docstrings of each function and refer to `pystrat_MWE.ipynb` for details on implementation.
-
-Many of the functions require data to be saved as a .csv with specific formatting of the data table. Examples/templates of these .csv's can be found in the `templates` directory.
+We can make *pystrat* better - feel free to [raise an issue](https://github.com/yuempark/pystrat/issues) or [make a pull request](https://github.com/yuempark/pystrat/pulls)!
