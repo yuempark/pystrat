@@ -433,7 +433,7 @@ class Style():
             Axis handle.
         """
         # print some plotting values
-        print('stratigraphic height scaling : 1 inch = 1 distance unit * {}'.format(self.height_scaling_factor))
+        print('stratigraphic height scaling : 1 distance unit = 1 inch * {}'.format(self.height_scaling_factor))
         print('width value of 1 will be     : {} inches'.format(self.width_inches))
 
         # extract attributes
