@@ -8,7 +8,7 @@ setuptools.setup(
     version="1.0.0",
     author="Yuem Park",
     author_email="yuempark@gmail.com",
-    description="Convenient stratigraphic plotting in Python.",
+    description="Convenient stratigraphic plotting and analysis in Python.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/yuempark/pystrat",
