@@ -1,16 +1,24 @@
 # pystrat
 
-<img src="images/pystrat-logo.png" width="100" height="100">
+<img src="https://raw.githubusercontent.com/yuempark/pystrat/master/images/pystrat-logo.png" width="100" height="100">
 
-A tool for stratigraphic plotting in Python 3.
+A tool for stratigraphic plotting and analysis in Python 3.
 
-*pystrat* seeks to make the plotting of stratigraphic data reproducible and simple.
+*pystrat* seeks to make the plotting and analysis of stratigraphic data reproducible and simple.
 
 ## Installation
 
-*pystrat* will eventually be available for download on [PyPI](https://pypi.org), but until that time, please follow the instructions below.
+### PyPI
 
-### Using the Terminal
+To install the latest release from PyPI, simply enter the following at the command prompt:
+
+```
+pip install pystrat
+```
+
+### GitHub
+
+To install the latest version of the code directly from GitHub:
 
 1. Open Terminal.
 
@@ -26,17 +34,7 @@ cd <path/to/directory/>
 git clone https://github.com/yuempark/pystrat.git
 ```
 
-### Using GitHub Desktop
-
-1. Click `Clone or download` above.
-
-2. Click `Open in Desktop`.
-
-3. Follow the prompts in GitHub Desktop to complete the clone.
-
-### Setting the Path
-
-* If you'd like to be able to import this package into code anywhere on your computer, you will need to open your `.bash_profile` or `.bashrc` and add the following:
+4. Set the path by opening `.bash_profile` or `.bashrc` (usually in your root directory) and adding the following:
 
 ```
 export PATH=$PATH:<path/to/directory>/pystrat
@@ -48,22 +46,6 @@ export PYTHONPATH=$PYTHONPATH:<path/to/directory>/pystrat
 ## Usage
 
 A tutorial on how to use the main features of *pystrat* are included in `pystrat-tutorial.ipynb`.
-
-## Stay up to Date
-
-To get the current version of the package:
-
-1. Change the current working directory to the location where you installed *pystrat*:
-
-```
-cd <path/to/directory/>
-```
-
-2. Copy, paste, and execute the following:
-
-```
-git pull
-```
 
 ## Contributing
 
