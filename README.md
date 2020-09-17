@@ -2,7 +2,7 @@
 
 <img src="https://raw.githubusercontent.com/yuempark/pystrat/master/images/pystrat-logo.png" width="100" height="100">
 
-A tool for stratigraphic plotting and analysis in Python 3.
+Convenient stratigraphic plotting in Python 3.
 
 *pystrat* seeks to make the plotting and analysis of stratigraphic data reproducible and simple.
 
