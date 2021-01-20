@@ -87,6 +87,7 @@ class Section:
         self.facies = facies
 
         # add some other facies attributes
+        self.top_height = np.cumsum(thicknesses)
         self.base_height = np.cumsum(thicknesses) - thicknesses
         self.unit_number = np.arange(n_thicknesses_units)
 
@@ -97,7 +98,7 @@ class Section:
         self.n_unique_facies = len(np.unique(facies))
 
         # keep track of attributes
-        self.facies_attributes = ['unit_number','thicknesses','base_height','facies']
+        self.facies_attributes = ['unit_number','thicknesses','base_height','top_height','facies']
         self.generic_attributes = ['n_units','total_thickness','unique_facies',
                                    'n_unique_facies']
         self.data_attributes = []
@@ -328,6 +329,134 @@ class Section:
                 df[attribute] = getattr(self, attribute)
 
             return df
+
+        def add_data_facies(self, section):
+            """
+            Extract the facies associated with each data point.
+
+            Parameters
+            ----------
+            section : Section
+                The parent Section object for this Data object.
+                (While the parent Section object is already implied for any
+                given Data object, accessing the Section object's attributes
+                is not elegant, so we pass it as an argument for now...)
+
+            Notes
+            -----
+            Samples marked with a .5 in the 'unit' column come from unit boundaries.
+            User input is required to assign the correct unit.
+
+            If the sample comes from the lower unit, subtract 0.5. If the sample comes
+            from the upper unit, add 0.5.
+            """
+            # make sure the data points are sorted
+            if not np.array_equal(np.sort(self.height), self.height):
+                raise Exception('Stratigraphic heights were out of order. '
+                                'Please check that the data were not logged incorrectly, '
+                                'and sort by stratigraphic height before using '
+                                'add_data_attribute().')
+
+            # calculate the unit from which the sample came
+            facies = []
+            unit_number = []
+            for i in range(len(self.height)):
+                unit_ind = 0
+
+                # stop once the base_height is equal to or greater than the sample height
+                # (with some tolerance for computer weirdness)
+                while section.top_height[unit_ind] < (self.height[i] - 1e-5):
+                    unit_ind = unit_ind + 1
+
+                # if the sample comes from a unit boundary, mark with .5
+                # (with some tolerance for computer weirdness)
+                if abs(section.top_height[unit_ind] - self.height[i]) < 1e-5:
+                    unit_number.append(unit_ind + 0.5)
+                    facies.append('!!!ON BOUNDARY!!!')
+                else:
+                    unit_number.append(unit_ind)
+                    facies.append(section.facies[unit_ind])
+
+            # assign the data to the object
+            setattr(self, 'facies', facies)
+            setattr(self, 'unit_number', unit_number)
+
+            # keep track of the attributes
+            height_attributes = self.height_attributes
+            height_attributes.append('facies')
+            height_attributes.append('unit_number')
+            setattr(self, 'height_attributes', height_attributes)
+
+        def clean_data_facies_helper(self, data_name):
+            """
+            Prints the code for cleaning up data points on unit boundaries.
+
+            Parameters
+            ----------
+            data_name : string
+                Variable name used for the Data object (e.g. 'section_01.data_01').
+
+            Notes
+            -----
+            Copy and paste the printed code into a cell and edit as follows:
+
+            If the sample comes from the lower unit, subtract 0.5. If the sample comes
+            from the upper unit, add 0.5
+
+            After fixing all changes, copy and paste the dataframe into the data .csv.
+            """
+            # check that add_data_facies has been run
+            if 'facies' not in self.height_attributes:
+                raise Exception('Data has not been assigned a facies. '
+                                'Data.add_data_facies() will assign facies and '
+                                'unit numbers automatically.')
+            if 'unit_number' not in self.height_attributes:
+                raise Exception('Data has not been assigned a unit_number. '
+                                'Data.add_data_facies() will assign facies and '
+                                'unit numbers automatically.')
+
+            # get the dataframe
+            df = self.return_data_dataframe()
+
+            # get the samples on unit boundaries
+            mask = df['unit_number'] != np.floor(df['unit_number'])
+            df_slice = df[mask]
+
+            # the case where there are no samples on units boundaries
+            if len(df_slice.index) == 0:
+                print('No samples are on unit boundaries - no manual edits required.')
+
+            # print the code
+            else:
+                print('1) Copy and paste the code below into a cell and edit as follows:')
+                print('- If the sample comes from the lower unit, subtract 0.5.')
+                print('- If the sample comes from the upper unit, add 0.5.')
+                print('')
+                print('2) Run Data.clean_data_facies().')
+                print('===')
+                for i in df_slice.index:
+                    print(data_name + '.unit_number[' + str(i) + '] = ' + str(df_slice['unit_number'][i]) +
+                          ' #height = ' + str(df_slice['height'][i]) + ', sample = ' + str(df_slice['sample'][i]))
+
+        def clean_data_facies(self, section):
+            """
+            Extract the facies associated with each data point AFTER cleaning up
+            the samples that are from unit boundaries using Data.clean_data_facies_helper().
+
+            Parameters
+            ----------
+            section : Section
+                The parent Section object for this Data object.
+                (While the parent Section object is already implied for any
+                given Data object, accessing the Section object's attributes
+                is not elegant, so we pass it as an argument for now...)
+            """
+            # convert unit_number to int
+            self.unit_number = np.array(self.unit_number, dtype=int)
+
+            # reassign facies
+            for i in range(len(self.unit_number)):
+                self.facies[i] = section.facies[self.unit_number[i]]
 
 class Style():
     """
