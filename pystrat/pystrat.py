@@ -26,11 +26,41 @@ import matplotlib.pyplot as plt
 # import additional modules
 import warnings
 from matplotlib.patches import Rectangle
+import matplotlib.patches as patches
 from mpl_toolkits.axes_grid1 import Divider, Size
+from PIL import Image
 
 ###############
 ### CLASSES ###
 ###############
+
+class Fence:
+    """
+    Organizes sections according to a shared datum
+    """
+
+    def __init__(self, sections, datums=None):
+        """
+        Initialize Section with the two primary attributes.
+
+        Parameters
+        ----------
+        sections : 1d array_like
+            List of Sections to be put into the fence
+        
+        datums : 1d array_like
+            If not specified, the datum for each section will be the bottom. If specified, must be list of same length as number of sections with heights in each section for the datum.
+        """
+        self.n_sections = len(sections)
+        self.sections = sections
+        if datums == None:
+            datums = np.zeros(self.n_sections) 
+            for ii in range(self.n_sections):
+                datums[ii] = sections[ii].base_height
+        else:
+            assert len(datums) == self.n_sections, 'Number of datums should equal number of sections'
+        self.datums = datums
+
 
 class Section:
     """
@@ -825,6 +855,63 @@ def section_style_compatibility(section, style):
     # print an all clear statement if the check passes
     if all_check:
         print('Section and Style are compatible.')
+
+def plot_swatch(swatch, extent, ax, swatch_wid=1.5):
+    """
+    plot a tesselated USGS geologic swatch to fit a desired extent
+
+    Parameters
+    ----------  
+    swatch : PIL image
+        PIL image of the swatch to tesselate
+
+    extent : 1d array_like
+        rectangular area in which to tesselate the swatch [x0, x1, y0, y1]
+    ax : matplotlib axis
+        axis in which to plot
+    swatch_wid : float
+        width of original swatch image file in inches
+    mask : [to be implemented]
+         masking geometry to apply to tesselated swatch (probably in axis coordinates?)
+    """
+    
+    # dimensions of extent (data coordinates)
+    dx_ex = x1 - x0
+    dy_ex = y1 - y0
+    ar = dy/dx
+    
+    # size of axis in inches
+    
+    # first get figure size
+    fig = ax.get_figure()
+    figsize = fig.get_size_inches()
+    
+    # axis inches per data unit
+    ax_x_in = np.diff(fig.transFigure.inverted().transform(ax.transData.transform([(0, 0), (1, 0)])), axis=0)[0][0] * \
+                         figsize[0]
+    ax_y_in = np.diff(fig.transFigure.inverted().transform(ax.transData.transform([(0, 0), (0, 1)])), axis=0)[0][1] * \
+                         figsize[1]
+    dx_ex_in = dx_ex * ax_x_in
+    dy_ex_in = dy_ex * ax_y_in
+    
+    # size of image
+    dx_sw, dy_sw = swatch.size  # in pixels
+    asp_sw = dy_sw/dx_sw
+    dx_sw_in = swatch_wid
+    dy_sw_in = asp_sw*dx_sw_in
+    
+    # tile image to overlap with extent
+    sw_np = np.array(swatch)
+    ny_tile = np.ceil(dy_ex_in/dy_sw_in).astype(int)
+    nx_tile = np.ceil(dx_ex_in/dx_sw_in).astype(int)
+    sw_tess = np.tile(sw_np, [ny_tile, nx_tile, 1])
+    
+    # now crop tessalated image to fit
+    x_idx_crop = int(dx_ex_in/dx_sw_in/nx_tile*sw_tess.shape[1])
+    y_idx_crop = int(dy_ex_in/dy_sw_in/ny_tile*sw_tess.shape[0])
+    sw_tess = sw_tess[0:y_idx_crop, 0:x_idx_crop, :]
+    
+    ax.imshow(sw_tess, extent=extent, zorder=2)
 
 def plot_stratigraphy(section, style, ncols=1, linewidth=1,
                       col_spacings=0.5, col_widths=1):
