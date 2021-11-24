@@ -22,6 +22,8 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import os
+
 
 # import additional modules
 import warnings
@@ -29,6 +31,13 @@ from matplotlib.patches import Rectangle
 import matplotlib.patches as patches
 from mpl_toolkits.axes_grid1 import Divider, Size
 from PIL import Image
+
+
+##
+## Global vars
+##
+mod_dir = os.path.dirname(os.path.realpath(__file__))
+
 
 ###############
 ### CLASSES ###
@@ -496,7 +505,7 @@ class Style():
     def __init__(self,
                  color_attribute, color_labels, color_values,
                  width_attribute, width_labels, width_values,
-                 height_scaling_factor, width_inches):
+                 swatch_values=None):
         """
         Initialize Style with the seven required attributes.
 
@@ -531,14 +540,11 @@ class Style():
             The widths that will be assigned to the associated labels.
             Values must be between 0 and 1.
 
-        height_scaling_factor : float
-            When plotting, the height of the section will have a height
-            in inches that is:
-                Section.total_thickness * Style.height_scaling_factor
+        swatch_values : 1d array_like
+            USGS swatch codes (see swatches/png/). Swatches are mapped to 
+            the same section attribute as color and use the same labels as
+            color_labels
 
-        width_inches : float
-            When plotting, a width value of 1 will be this many inches
-            wide.
         """
         # convert to arrays and check the dimensionality
         color_labels = attribute_convert_and_check(color_labels)
@@ -562,14 +568,13 @@ class Style():
         self.width_attribute = width_attribute
         self.width_labels = width_labels
         self.width_values = width_values
-        self.height_scaling_factor = height_scaling_factor
-        self.width_inches = width_inches
+        self.swatch_values = swatch_values
 
         # add some other useful attributes
         self.n_color_labels = len(color_labels)
         self.n_width_labels = len(width_labels)
 
-    def plot_legend(self, legend_unit_height=0.25):
+    def plot_legend(self, legend_unit_height=0.25, figsize=(6,6)):
         """
         Plot a legend for this Style object.
 
@@ -591,15 +596,13 @@ class Style():
         ax : matplotlib Axes
             Axis handle.
         """
-        # print some plotting values
-        print('stratigraphic height scaling : 1 distance unit = 1 inch * {}'.format(self.height_scaling_factor))
-        print('width value of 1 will be     : {} inches'.format(self.width_inches))
 
         # extract attributes
         color_labels = self.color_labels
         width_labels = self.width_labels
         color_values = self.color_values
         width_values = self.width_values
+        swatch_values = self.swatch_values
 
         # if the color and width labels are different
         if np.any(~(color_labels == width_labels)):
@@ -610,7 +613,7 @@ class Style():
             width_values = width_values[width_sort_inds]
 
             # initialize the figure
-            fig, ax = plt.subplots(nrows=1, ncols=2, sharey=True)
+            fig, ax = plt.subplots(nrows=1, ncols=2, sharey=True, figsize=figsize)
 
             # determine the axis height and limits first
             if self.n_color_labels > self.n_width_labels:
@@ -630,6 +633,12 @@ class Style():
                 # create the rectangle - with thickness of 1
                 ax[0].add_patch(Rectangle((0.0,strat_height_colors), 1,
                                           1, facecolor=color_values[i], edgecolor='k'))
+
+                # if swatch is defined, plot it
+                if type(swatch_values) != 'NoneType':
+                    if swatch_values[i] != None:
+                        extent = [0, 1, strat_height_colors, strat_height_colors+1]
+                        plot_swatch(swatch_values[i], extent, ax)
 
                 # label the unit
                 ax[0].text(1.2, strat_height_colors+0.5, color_labels[i],
@@ -665,20 +674,20 @@ class Style():
                                           1, facecolor='grey', edgecolor='k'))
 
                 # the label
-                ax[1].text(1.1, strat_height_widths+0.5, width_labels[i],
-                           horizontalalignment='left', verticalalignment='center')
+                ax[1].text(-0.01, strat_height_widths+0.5, width_labels[i],
+                           horizontalalignment='right', verticalalignment='center')
 
                 # count the height
                 strat_height_widths = strat_height_widths + 1
 
             # set the axis dimensions (values below are all in inches)
-            ax1_lower_left_x = ax0_lower_left_x + ax0_width + 2
-            ax1_lower_left_y = ax0_lower_left_y
-            ax1_width = self.width_inches
-            h = [Size.Fixed(ax1_lower_left_x), Size.Fixed(ax1_width)]
-            v = [Size.Fixed(ax1_lower_left_y), Size.Fixed(ax_height)]
-            divider = Divider(fig, (0.0, 0.0, 1., 1.), h, v, aspect=False)
-            ax[1].set_axes_locator(divider.new_locator(nx=1, ny=1))
+            # ax1_lower_left_x = ax0_lower_left_x + ax0_width + 2
+            # ax1_lower_left_y = ax0_lower_left_y
+            # ax1_width = self.width_inches
+            # h = [Size.Fixed(ax1_lower_left_x), Size.Fixed(ax1_width)]
+            # v = [Size.Fixed(ax1_lower_left_y), Size.Fixed(ax_height)]
+            # divider = Divider(fig, (0.0, 0.0, 1., 1.), h, v, aspect=False)
+            # ax[1].set_axes_locator(divider.new_locator(nx=1, ny=1))
 
             # prettify
             ax[1].set_xlim(0,1)
@@ -701,8 +710,8 @@ class Style():
 
             # not really necessary since the axis sizes are already
             # forced, but we may as well set the figsize here too
-            fig.set_size_inches(ax1_lower_left_x + ax1_width + ax0_lower_left_x,
-                                ax1_lower_left_y*2 + ax_height)
+            # fig.set_size_inches(ax1_lower_left_x + ax1_width + ax0_lower_left_x,
+            #                     ax1_lower_left_y*2 + ax_height)
 
         # if the color and width labels are the same
         else:
@@ -713,9 +722,10 @@ class Style():
             width_labels = width_labels[width_sort_inds]
             color_values = color_values[width_sort_inds]
             width_values = width_values[width_sort_inds]
+            swatch_values = swatch_values[width_sort_inds]
 
             # initiate fig and ax
-            fig, ax = plt.subplots()
+            fig, ax = plt.subplots(figsize=figsize)
 
             # determine the axis height and limits first
             ax_height = legend_unit_height * self.n_color_labels
@@ -731,21 +741,27 @@ class Style():
                 ax.add_patch(Rectangle((0.0,strat_height), width_values[i],
                                        1, facecolor=color_values[i], edgecolor='k'))
 
+                # if swatch is defined, plot it
+                if type(swatch_values) != 'NoneType':
+                    if swatch_values[i] != None:
+                        extent = [0, width_values[i], strat_height, strat_height+1]
+                        plot_swatch(swatch_values[i], extent, ax)
+
                 # label the unit
-                ax.text(1.1, strat_height+0.5, color_labels[i],
-                        horizontalalignment='left', verticalalignment='center')
+                ax.text(-0.01, strat_height+0.5, color_labels[i],
+                        horizontalalignment='right', verticalalignment='center')
 
                 # count the stratigraphic height
                 strat_height = strat_height + 1
 
             # set the axis dimensions (values below are all in inches)
-            ax_lower_left_x = 0.5
-            ax_lower_left_y = 0.5
-            ax_width = self.width_inches
-            h = [Size.Fixed(ax_lower_left_x), Size.Fixed(ax_width)]
-            v = [Size.Fixed(ax_lower_left_y), Size.Fixed(ax_height)]
-            divider = Divider(fig, (0.0, 0.0, 1., 1.), h, v, aspect=False)
-            ax.set_axes_locator(divider.new_locator(nx=1, ny=1))
+            # ax_lower_left_x = 0.5
+            # ax_lower_left_y = 0.5
+            # ax_width = self.width_inches
+            # h = [Size.Fixed(ax_lower_left_x), Size.Fixed(ax_width)]
+            # v = [Size.Fixed(ax_lower_left_y), Size.Fixed(ax_height)]
+            # divider = Divider(fig, (0.0, 0.0, 1., 1.), h, v, aspect=False)
+            # ax.set_axes_locator(divider.new_locator(nx=1, ny=1))
 
             # prettify
             ax.set_xlim(0,1)
@@ -768,8 +784,8 @@ class Style():
 
             # not really necessary since the axis sizes are already
             # forced, but we may as well set the figsize here too
-            fig.set_size_inches(ax_lower_left_x*2 + ax_width,
-                                ax_lower_left_y*2 + ax_height)
+            # fig.set_size_inches(ax_lower_left_x*2 + ax_width,
+            #                     ax_lower_left_y*2 + ax_height)
 
         return fig, ax
 
@@ -856,31 +872,40 @@ def section_style_compatibility(section, style):
     if all_check:
         print('Section and Style are compatible.')
 
-def plot_swatch(swatch, extent, ax, swatch_wid=1.5):
+def plot_swatch(swatch_code, extent, ax, swatch_wid=1.5):
     """
     plot a tesselated USGS geologic swatch to fit a desired extent
 
     Parameters
     ----------  
-    swatch : PIL image
-        PIL image of the swatch to tesselate
+    swatch_code : int
+        USGS swatch code
 
     extent : 1d array_like
         rectangular area in which to tesselate the swatch [x0, x1, y0, y1]
+
     ax : matplotlib axis
         axis in which to plot
+
     swatch_wid : float
         width of original swatch image file in inches
+
     mask : [to be implemented]
          masking geometry to apply to tesselated swatch (probably in axis coordinates?)
     """
     
+    x0, x1, y0, y1 = extent
+
     # dimensions of extent (data coordinates)
     dx_ex = x1 - x0
     dy_ex = y1 - y0
-    ar = dy/dx
-    
-    # size of axis in inches
+
+    if dx_ex==0 or dy_ex==0:
+        warnings.warn('Extent has no width and/or height. Swatch cannot be plotted.')
+        return
+
+    # load swatch
+    swatch = Image.open(mod_dir + '/swatches/png/%s.png' % swatch_code)
     
     # first get figure size
     fig = ax.get_figure()
@@ -911,7 +936,7 @@ def plot_swatch(swatch, extent, ax, swatch_wid=1.5):
     y_idx_crop = int(dy_ex_in/dy_sw_in/ny_tile*sw_tess.shape[0])
     sw_tess = sw_tess[0:y_idx_crop, 0:x_idx_crop, :]
     
-    ax.imshow(sw_tess, extent=extent, zorder=2)
+    ax.imshow(sw_tess, extent=extent, zorder=2, aspect='auto')
 
 def plot_stratigraphy(section, style, ncols=1, linewidth=1,
                       col_spacings=0.5, col_widths=1):
