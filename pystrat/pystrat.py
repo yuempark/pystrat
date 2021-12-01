@@ -48,7 +48,7 @@ class Fence:
     Organizes sections according to a shared datum
     """
 
-    def __init__(self, sections, datums=None):
+    def __init__(self, sections, datums=[], correlations=[], distances=[]):
         """
         Initialize Section with the two primary attributes.
 
@@ -58,17 +58,90 @@ class Fence:
             List of Sections to be put into the fence
         
         datums : 1d array_like
-            If not specified, the datum for each section will be the bottom. If specified, must be list of same length as number of sections with heights in each section for the datum.
+            If not specified, the datum for each section will be the bottom. If specified, 
+            must be list of same length as number of sections with heights in each section for the datum.
+
+        correlations : 2d array_like
+            each column is a correlated horizon where the rows are the heights of this horizon in each section.
+            will plot as a line between fence posts.
+
+        distances : 1d array_like
+            1D coordinates of sections. distances between sections will be used to scale the plotting distances 
+            in the fence diagram
+
+        To Do:
+        ------
+        - [ ] finish implementing distances in plotting
         """
         self.n_sections = len(sections)
         self.sections = sections
-        if datums == None:
+        if len(datums) == 0:
             datums = np.zeros(self.n_sections) 
             for ii in range(self.n_sections):
-                datums[ii] = sections[ii].base_height
+                datums[ii] = sections[ii].base_height[0]
         else:
             assert len(datums) == self.n_sections, 'Number of datums should equal number of sections'
         self.datums = datums
+
+        # apply datums as shift to sections
+        for ii in range(self.n_sections):
+            self.sections[ii].shift_heights(-self.datums[ii])
+
+        if len(correlations) != 0:
+            assert correlations.shape[0] == self.n_sections, 'Number of correlated horizons should match number of sections'
+        self.correlations = correlations
+
+        if len(distances) != 0:
+            assert len(distances) == self.n_sections, 'Number of section distances should match number of sections'
+        self.distances = distances
+
+
+
+    def plot(self, style, fig=None, legend=False, **kwargs):
+        """
+        Plot a fence diagram
+
+        Parameters
+        ----------
+        style : Style
+            A Style object.
+
+        fig : matplotlib.figure.Figure
+            Figure to plot into if desired.
+
+        legend : boolean
+            Whether or not to include a legend for facies
+        """
+        # set up axes to plot sections into (will share vertical coordinates)
+        if fig==None:
+            fig = plt.figure(**kwargs)
+        min_height = np.min([section.base_height[0] for section in self.sections])
+        max_height = np.max([section.top_height[-1] for section in self.sections])
+        
+        axes = []
+        for ii in range(self.n_sections):
+            axes.append(fig.add_subplot(1, self.n_sections, ii+1, xlim=[0, 1], ylim=[min_height, max_height]))
+
+        # then plot sections
+        for ii, section in enumerate(self.sections):
+            section.plot(style, ax=axes[ii])
+
+        # then move and scale axes so that vertical coordinate is consistent and datum is at same height in figure
+        for ii, ax in enumerate(axes):
+            ax.set_xlim([0, 1])
+            ax.set_ylim([min_height, max_height])
+            ax.set_title(self.sections[ii].name)
+
+        # clean up plotting
+        for ii in range(1, self.n_sections):
+            # axes[ii].set_yticklabels = []
+            # axes[ii].set_ylabel = None
+            axes[ii].get_yaxis().set_visible(False)
+            axes[ii].spines['left'].set_visible(False)
+        for ii in range(self.n_sections):
+            axes[ii].get_xaxis().set_visible(False)
+            axes[ii].spines['bottom'].set_visible(False)
+
 
 
 class Section:
@@ -76,7 +149,7 @@ class Section:
     Organizes all data associated with a single stratigraphic section.
     """
 
-    def __init__(self, thicknesses, facies):
+    def __init__(self, thicknesses, facies, name=None):
         """
         Initialize Section with the two primary attributes.
 
@@ -131,6 +204,7 @@ class Section:
         self.unit_number = np.arange(n_thicknesses_units)
 
         # add some generic attributes
+        self.name = name
         self.n_units = n_thicknesses_units
         self.total_thickness = np.sum(thicknesses)
         self.unique_facies = np.unique(facies)
@@ -138,9 +212,108 @@ class Section:
 
         # keep track of attributes
         self.facies_attributes = ['unit_number','thicknesses','base_height','top_height','facies']
-        self.generic_attributes = ['n_units','total_thickness','unique_facies',
+        self.generic_attributes = ['name', 'n_units','total_thickness','unique_facies',
                                    'n_unique_facies']
         self.data_attributes = []
+
+    def shift_heights(self, shift):
+        """
+        Shift all heights by some fixed distance. (additive)
+
+        Parameters
+        ----------
+        shift : int or float
+            Amount by which to shift stratigraphic heights
+        """
+        # update facies attributes
+        self.base_height = self.base_height + shift
+        self.top_height = self.top_height + shift
+
+        # data attributes
+        for attribute in self.data_attributes:
+            data_attribute = getattr(self, attribute)
+            data_attribute.height = data_attribute.height + shift
+            setattr(self, attribute, data_attribute)
+
+    def plot(self, style,  ax=None, linewidth=1):
+        """
+        Plot this section using a Style object.
+
+        Parameters
+        ----------
+        style : Style
+            A Style object.
+
+        ax : matplotlib axis
+            Axis in which to plot, if desired. Otherwise makes a new axes object.
+
+        linewidth : float
+            The linewidth when drawing the stratigraphic section.
+        """
+        # get the attributes - implicitly checks if the attributes exist
+        color_attribute = getattr(self, style.color_attribute)
+        width_attribute = getattr(self, style.width_attribute)
+
+        # initialize
+        if ax==None:
+            ax = plt.axes(ylim=[self.base_height[0], self.top_height[-1]])
+
+        # determine the axis height and limits first
+        # ax_height = style.height_scaling_factor * section.total_thickness
+        # ax.set_ylim(0, self.total_thickness)
+
+        # initiate counting of the stratigraphic height
+        strat_height = self.base_height[0]
+
+        # loop over elements of the data
+        for i in range(self.n_units):
+
+            # pull out the thickness
+            this_thickness = self.thicknesses[i]
+
+            # loop over the elements in Style to get the color and width
+            for j in range(style.n_color_labels):
+                if color_attribute[i] == style.color_labels[j]:
+                    this_color = style.color_values[j]
+            for j in range(style.n_width_labels):
+                if width_attribute[i] == style.width_labels[j]:
+                    this_width = style.width_values[j]
+
+            # create the rectangle
+            ax.add_patch(Rectangle((0.0,strat_height), this_width, this_thickness,
+                        facecolor=this_color, edgecolor='k', linewidth=linewidth))
+
+            # if swatch is defined, plot it
+            if style.swatch_values != None:
+                for j in range(style.n_color_labels):
+                    if color_attribute[i] == style.color_labels[j]:
+                        this_swatch = style.swatch_values[j]
+                        if this_swatch == None:
+                            continue
+                        extent = [0, this_width, strat_height, strat_height+this_thickness]
+                        plot_swatch(this_swatch, extent, ax)
+
+            # count the stratigraphic height
+            strat_height = strat_height + this_thickness
+
+        # prettify
+        ax.set_xlim(0,1)
+        ax.set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1])
+        for label in ax.get_xticklabels():
+            label.set_rotation(270)
+            label.set_ha('center')
+            label.set_va('top')
+        ax.set_axisbelow(True)
+        ax.xaxis.grid(ls='--')
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.set_ylabel('stratigraphic height [m]')
+
+        # turning the spines off creates some clipping mask issues
+        # so just turn the clipping masks off
+        for obj in ax.findobj():
+            obj.set_clip_on(False)
+
 
     def add_facies_attribute(self, attribute_name, attribute_values):
         """
@@ -551,6 +724,8 @@ class Style():
         width_labels = attribute_convert_and_check(width_labels)
         width_values = attribute_convert_and_check(width_values)
 
+        swatch_values = np.asarray(swatch_values).ravel().tolist()
+
         # convert from pandas series/dataframes to arrays if necessary
         if type(color_values) == pd.core.series.Series:
             color_values = color_values.values
@@ -635,7 +810,7 @@ class Style():
                                           1, facecolor=color_values[i], edgecolor='k'))
 
                 # if swatch is defined, plot it
-                if type(swatch_values) != 'NoneType':
+                if swatch_values != None:
                     if swatch_values[i] != None:
                         extent = [0, 1, strat_height_colors, strat_height_colors+1]
                         plot_swatch(swatch_values[i], extent, ax)
@@ -646,15 +821,6 @@ class Style():
 
                 # count the height
                 strat_height_colors = strat_height_colors + 1
-
-            # set the axis dimensions (values below are all in inches)
-            ax0_lower_left_x = 0.5
-            ax0_lower_left_y = 0.5
-            ax0_width = 0.5
-            h = [Size.Fixed(ax0_lower_left_x), Size.Fixed(ax0_width)]
-            v = [Size.Fixed(ax0_lower_left_y), Size.Fixed(ax_height)]
-            divider = Divider(fig, (0.0, 0.0, 1., 1.), h, v, aspect=False)
-            ax[0].set_axes_locator(divider.new_locator(nx=1, ny=1))
 
             # set the limits
             ax[0].set_xlim(0,1)
@@ -680,15 +846,6 @@ class Style():
                 # count the height
                 strat_height_widths = strat_height_widths + 1
 
-            # set the axis dimensions (values below are all in inches)
-            # ax1_lower_left_x = ax0_lower_left_x + ax0_width + 2
-            # ax1_lower_left_y = ax0_lower_left_y
-            # ax1_width = self.width_inches
-            # h = [Size.Fixed(ax1_lower_left_x), Size.Fixed(ax1_width)]
-            # v = [Size.Fixed(ax1_lower_left_y), Size.Fixed(ax_height)]
-            # divider = Divider(fig, (0.0, 0.0, 1., 1.), h, v, aspect=False)
-            # ax[1].set_axes_locator(divider.new_locator(nx=1, ny=1))
-
             # prettify
             ax[1].set_xlim(0,1)
             ax[1].set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1])
@@ -708,11 +865,6 @@ class Style():
             for obj in fig.findobj():
                 obj.set_clip_on(False)
 
-            # not really necessary since the axis sizes are already
-            # forced, but we may as well set the figsize here too
-            # fig.set_size_inches(ax1_lower_left_x + ax1_width + ax0_lower_left_x,
-            #                     ax1_lower_left_y*2 + ax_height)
-
         # if the color and width labels are the same
         else:
 
@@ -722,7 +874,10 @@ class Style():
             width_labels = width_labels[width_sort_inds]
             color_values = color_values[width_sort_inds]
             width_values = width_values[width_sort_inds]
-            swatch_values = swatch_values[width_sort_inds]
+            # import pdb
+            # pdb.set_trace()
+            if swatch_values != None:
+                swatch_values = [swatch_values[x] for x in width_sort_inds]
 
             # initiate fig and ax
             fig, ax = plt.subplots(figsize=figsize)
@@ -742,7 +897,7 @@ class Style():
                                        1, facecolor=color_values[i], edgecolor='k'))
 
                 # if swatch is defined, plot it
-                if type(swatch_values) != 'NoneType':
+                if swatch_values != None:
                     if swatch_values[i] != None:
                         extent = [0, width_values[i], strat_height, strat_height+1]
                         plot_swatch(swatch_values[i], extent, ax)
@@ -753,15 +908,6 @@ class Style():
 
                 # count the stratigraphic height
                 strat_height = strat_height + 1
-
-            # set the axis dimensions (values below are all in inches)
-            # ax_lower_left_x = 0.5
-            # ax_lower_left_y = 0.5
-            # ax_width = self.width_inches
-            # h = [Size.Fixed(ax_lower_left_x), Size.Fixed(ax_width)]
-            # v = [Size.Fixed(ax_lower_left_y), Size.Fixed(ax_height)]
-            # divider = Divider(fig, (0.0, 0.0, 1., 1.), h, v, aspect=False)
-            # ax.set_axes_locator(divider.new_locator(nx=1, ny=1))
 
             # prettify
             ax.set_xlim(0,1)
@@ -781,11 +927,6 @@ class Style():
             # so just turn the clipping masks off
             for obj in fig.findobj():
                 obj.set_clip_on(False)
-
-            # not really necessary since the axis sizes are already
-            # forced, but we may as well set the figsize here too
-            # fig.set_size_inches(ax_lower_left_x*2 + ax_width,
-            #                     ax_lower_left_y*2 + ax_height)
 
         return fig, ax
 
@@ -891,7 +1032,7 @@ def plot_swatch(swatch_code, extent, ax, swatch_wid=1.5):
         width of original swatch image file in inches
 
     mask : [to be implemented]
-         masking geometry to apply to tesselated swatch (probably in axis coordinates?)
+        masking geometry to apply to tesselated swatch (probably in axis coordinates?)
     """
     
     x0, x1, y0, y1 = extent
@@ -935,174 +1076,9 @@ def plot_swatch(swatch_code, extent, ax, swatch_wid=1.5):
     x_idx_crop = int(dx_ex_in/dx_sw_in/nx_tile*sw_tess.shape[1])
     y_idx_crop = int(dy_ex_in/dy_sw_in/ny_tile*sw_tess.shape[0])
     sw_tess = sw_tess[0:y_idx_crop, 0:x_idx_crop, :]
+
+    if sw_tess.shape[0]==0 or sw_tess.shape[1]==0:
+        warnings.warn('Extent has no width and/or height. Swatch cannot be plotted.')
+        return
     
     ax.imshow(sw_tess, extent=extent, zorder=2, aspect='auto')
-
-def plot_stratigraphy(section, style, ncols=1, linewidth=1,
-                      col_spacings=0.5, col_widths=1):
-    """
-    Initialize a figure and subplots, with the stratigraphic section
-    already plotted on the first axis.
-
-    This function is intended to act similar to `plt.subplots()` in that
-    it will initialize the figure and axis handles. However, given that
-    controlling the exact width and height of the axes is critical, this
-    function is necessary to initialize the handles correctly.
-
-    Note that setting the figsize itself is not sufficient to control
-    the width and height of the axes exactly, since the figsize includes
-    the size of the padding around the axes.
-
-    Parameters
-    ----------
-    section : Section
-        A Section object.
-
-    style : Style
-        A Style object.
-
-    ncols : int
-        The number of axes that will be in the figure (including the
-        axis with the stratigraphic section.)
-
-    linewidth : float
-        The linewidth when drawing the stratigraphic section.
-
-    col_spacings : float or array_like
-        The spacing between the axes in inches. If a float, this value
-        will be interpreted as uniform spacing between the axes. If an
-        array, the length of the array must be ncols - 1, and the values
-        will be the spacing between the individual axes.
-
-    col_widths : float or array_like
-        The width of the axes as a ratio relative to the width of the
-        stratigraphic column. If a float, this value will be interpreted
-        as a uniform width of the axes, excluding the stratigraphic
-        column, for which the width is explicitly set in the Style. If
-        an array, the length of the array must be ncols - 1, and the
-        values will be the widths of the individual axes excluding the
-        stratigraphic column.
-
-    Returns
-    -------
-    fig : matplotlib Figure
-        Figure handle.
-
-    ax : matplotlib Axes
-        Axis handle.
-    """
-    # get the attributes - implicitly checks if the attributes exist
-    color_attribute = getattr(section, style.color_attribute)
-    width_attribute = getattr(section, style.width_attribute)
-
-    # initialize
-    fig, ax = plt.subplots(nrows=1, ncols=ncols, sharey=True)
-
-    # get the first axis
-    if ncols == 1:
-        ax0 = ax
-    else:
-        ax0 = ax[0]
-
-    # determine the axis height and limits first
-    ax_height = style.height_scaling_factor * section.total_thickness
-    ax0.set_ylim(0, section.total_thickness)
-
-    # initiate counting of the stratigraphic height
-    strat_height = 0.0
-
-    # loop over elements of the data
-    for i in range(section.n_units):
-
-        # pull out the thickness
-        this_thickness = section.thicknesses[i]
-
-        # loop over the elements in Style to get the color and width
-        for j in range(style.n_color_labels):
-            if color_attribute[i] == style.color_labels[j]:
-                this_color = style.color_values[j]
-        for j in range(style.n_width_labels):
-            if width_attribute[i] == style.width_labels[j]:
-                this_width = style.width_values[j]
-
-        # create the rectangle
-        ax0.add_patch(Rectangle((0.0,strat_height), this_width, this_thickness,
-                      facecolor=this_color, edgecolor='k', linewidth=linewidth))
-
-        # count the stratigraphic height
-        strat_height = strat_height + this_thickness
-
-    # set the axis dimensions (values below are all in inches)
-    ax0_lower_left_x = 0.5
-    ax0_lower_left_y = 0.5
-    ax0_width = style.width_inches
-    h = [Size.Fixed(ax0_lower_left_x), Size.Fixed(ax0_width)]
-    v = [Size.Fixed(ax0_lower_left_y), Size.Fixed(ax_height)]
-    divider = Divider(fig, (0.0, 0.0, 1., 1.), h, v, aspect=False)
-    ax0.set_axes_locator(divider.new_locator(nx=1, ny=1))
-
-    # prettify
-    ax0.set_xlim(0,1)
-    ax0.set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1])
-    for label in ax0.get_xticklabels():
-        label.set_rotation(270)
-        label.set_ha('center')
-        label.set_va('top')
-    ax0.set_axisbelow(True)
-    ax0.xaxis.grid(ls='--')
-    ax0.spines['top'].set_visible(False)
-    ax0.spines['right'].set_visible(False)
-    ax0.set_ylabel('stratigraphic height [m]')
-
-    # turning the spines off creates some clipping mask issues
-    # so just turn the clipping masks off
-    for obj in ax0.findobj():
-        obj.set_clip_on(False)
-
-    # check if the col_spacing and col_widths is of the correct format
-    if type(col_spacings)==list or type(col_spacings)==np.ndarray:
-        if len(col_spacings) != ncols-1:
-            raise Exception('col_spacings must be either a float or '
-                            'array_like with length ncols-1.')
-    if type(col_widths)==list or type(col_widths)==np.ndarray:
-        if len(col_widths) != ncols-1:
-            raise Exception('col_widths must be either a float or '
-                            'array_like with length ncols-1.')
-
-    # set up the other axes
-    if ncols != 1:
-
-        # iterate through the axes
-        for i in range(1, ncols):
-
-            # get the spacing and width values
-            if type(col_spacings)==list or type(col_spacings)==np.ndarray:
-                col_spacing = col_spacings[i-1]
-            else:
-                col_spacing = col_spacings
-            if type(col_widths)==list or type(col_widths)==np.ndarray:
-                col_width = col_widths[i-1] * ax0_width
-            else:
-                col_width = col_widths * ax0_width
-
-            # adjust the axis
-            if i==1:
-                axn_lower_left_x = ax0_lower_left_x + ax0_width + col_spacing
-            else:
-                axn_lower_left_x = axn_lower_left_x + axn_width + col_spacing
-            axn_lower_left_y = ax0_lower_left_y
-            axn_width = col_width
-            h = [Size.Fixed(axn_lower_left_x), Size.Fixed(axn_width)]
-            v = [Size.Fixed(axn_lower_left_y), Size.Fixed(ax_height)]
-            divider = Divider(fig, (0.0, 0.0, 1., 1.), h, v, aspect=False)
-            ax[i].set_axes_locator(divider.new_locator(nx=1, ny=1))
-
-    # set the figsize here too to account for the axis size manipulation
-    if ncols != 1:
-        fig.set_size_inches(ax0_lower_left_x*2 + np.sum(col_spacings) + np.sum(col_widths) + ax0_width,
-                            ax0_lower_left_y*2 + ax_height)
-    else:
-        fig.set_size_inches(ax0_lower_left_x*2 + ax0_width,
-                            ax0_lower_left_y*2 + ax_height)
-
-    return fig, ax
