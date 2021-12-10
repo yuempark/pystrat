@@ -104,7 +104,8 @@ class Fence:
 
         # order sections by coordinates
         if len(self.coordinates) > 0:
-            idx = np.argsort(coordinates)
+            idx = np.argsort(self.coordinates)
+            self.coordinates = self.coordinates[idx]
             self.sections = [self.sections[x] for x in idx]
             self.datums = self.datums[idx]
             if len(self.correlations) > 0:
@@ -146,11 +147,30 @@ class Fence:
         min_height = np.min([section.base_height[0] for section in self.sections])
         max_height = np.max([section.top_height[-1] for section in self.sections])
 
-        # given distances
-        
+        # if spacing sections realistically, set up axes as such        
         axes = []
-        for ii in range(self.n_sections):
-            axes.append(fig.add_subplot(1, self.n_sections, ii+1))
+        n_axes = self.n_sections + legend
+        if distance_spacing:
+            # distances between sections
+            distances = np.diff(self.coordinates)
+            gam = np.min(distances)/np.max(distances)
+            if legend:
+                # x is width of section axes in figure coordinates
+                x = gam*sec_wid/(1 + gam + gam*sec_wid)
+                # D is width in figure coordinates of area to space sections
+                D = (1-x)/(1+gam)
+            else:
+                x = gam*sec_wid/(1 + gam*sec_wid)
+                D = 1 - x
+
+            
+        else:
+            for ii in range(n_axes):
+                axes.append(fig.add_subplot(1, n_axes, ii+1))
+
+        for ii, ax in enumerate(axes):
+            ax.set_xlim([0, 1])
+            ax.set_ylim([min_height, max_height])
 
         # then plot sections
         for ii, section in enumerate(self.sections):
@@ -158,8 +178,8 @@ class Fence:
 
         # then move and scale axes so that vertical coordinate is consistent and datum is at same height in figure
         for ii, ax in enumerate(axes):
-            ax.set_xlim([0, 1])
-            ax.set_ylim([min_height, max_height])
+            # ax.set_xlim([0, 1])
+            # ax.set_ylim([min_height, max_height])
             ax.set_title(self.sections[ii].name)
 
         # clean up plotting
@@ -276,6 +296,7 @@ class Section:
 
         ax : matplotlib axis
             Axis in which to plot, if desired. Otherwise makes a new axes object.
+            AXIS LIMITS MUST BE APPLIED IN ADVANCE FOR SWATCHES TO PLOT CORRECTLY
 
         linewidth : float
             The linewidth when drawing the stratigraphic section.
@@ -287,10 +308,10 @@ class Section:
         # initialize
         if ax==None:
             ax = plt.axes()
+            ax.set_ylim([self.base_height[0], self.top_height[-1]])
 
         # determine the axis height and limits first
         # ax_height = style.height_scaling_factor * section.total_thickness
-        ax.set_ylim([self.base_height[0], self.top_height[-1]])
 
         # initiate counting of the stratigraphic height
         strat_height = self.base_height[0]
@@ -1112,3 +1133,4 @@ def plot_swatch(swatch_code, extent, ax, swatch_wid=1.5):
         return
     
     ax.imshow(sw_tess, extent=extent, zorder=2, aspect='auto')
+    ax.autoscale(False)

@@ -18,3 +18,4 @@
 ## To Do
 
 - [ ] drawing annotations for beds as part of Section.plot()
+- [ ] when plotting swatches, if the axis y-limits are smaller than the total height of the stratigraphy, all of the swatches are still plotted even though they extend beyond the axis limits. This behavior should be changed to respect the axis limits.
