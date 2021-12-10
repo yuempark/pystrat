@@ -153,21 +153,27 @@ class Fence:
         if distance_spacing:
             # distances between sections
             distances = np.diff(self.coordinates)
-            gam = np.min(distances)/np.max(distances)
+            beta = np.min(distances)/(np.max(self.coordinates)-np.min(self.coordinates))
             if legend:
                 # x is width of section axes in figure coordinates
-                x = gam*sec_wid/(1 + gam + gam*sec_wid)
+                x = beta*sec_wid/(1 + beta + beta*sec_wid)
                 # D is width in figure coordinates of area to space sections
-                D = (1-x)/(1+gam)
+                D = (1-x)/(1+beta)
             else:
-                x = gam*sec_wid/(1 + gam*sec_wid)
+                x = beta*sec_wid/(1 + beta*sec_wid)
                 D = 1 - x
 
+            # now set up axis in figure coordinates
+            coordinates = self.coordinates - np.min(self.coordinates)  # center coordinates
+            ax_left_coords = coordinates/np.max(coordinates) * D
+            for ii in range(n_axes):
+                axes.append(plt.axes([ax_left_coords[ii], 0, x*sec_wid, 1], xlim=[0,1])) 
             
         else:
             for ii in range(n_axes):
                 axes.append(fig.add_subplot(1, n_axes, ii+1))
 
+        # enforce axis limits before plotting to maintain swatch scaling
         for ii, ax in enumerate(axes):
             ax.set_xlim([0, 1])
             ax.set_ylim([min_height, max_height])
