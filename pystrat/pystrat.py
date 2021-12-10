@@ -23,6 +23,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
+import copy
 
 
 # import additional modules
@@ -48,7 +49,7 @@ class Fence:
     Organizes sections according to a shared datum
     """
 
-    def __init__(self, sections, datums=[], correlations=[], distances=[]):
+    def __init__(self, sections, datums=[], correlations=[], coordinates=[], legend=False):
         """
         Initialize Section with the two primary attributes.
 
@@ -65,16 +66,20 @@ class Fence:
             each column is a correlated horizon where the rows are the heights of this horizon in each section.
             will plot as a line between fence posts.
 
-        distances : 1d array_like
+        coordinates : 1d array_like
             1D coordinates of sections. distances between sections will be used to scale the plotting distances 
             in the fence diagram
+
+        legend : boolean
+            Whether or not to plot a legend
 
         To Do:
         ------
         - [ ] finish implementing distances in plotting
         """
         self.n_sections = len(sections)
-        self.sections = sections
+        self.sections = [copy.deepcopy(section) for section in sections]
+        datums = np.array(datums)
         if len(datums) == 0:
             datums = np.zeros(self.n_sections) 
             for ii in range(self.n_sections):
@@ -87,17 +92,27 @@ class Fence:
         for ii in range(self.n_sections):
             self.sections[ii].shift_heights(-self.datums[ii])
 
+        correlations = np.array(correlations)
         if len(correlations) != 0:
             assert correlations.shape[0] == self.n_sections, 'Number of correlated horizons should match number of sections'
         self.correlations = correlations
 
-        if len(distances) != 0:
-            assert len(distances) == self.n_sections, 'Number of section distances should match number of sections'
-        self.distances = distances
+        coordinates = np.array(coordinates)
+        if len(coordinates) != 0:
+            assert len(coordinates) == self.n_sections, 'Number of section distances should match number of sections'
+        self.coordinates = coordinates
+
+        # order sections by coordinates
+        if len(self.coordinates) > 0:
+            idx = np.argsort(coordinates)
+            self.sections = [self.sections[x] for x in idx]
+            self.datums = self.datums[idx]
+            if len(self.correlations) > 0:
+                self.correlations = self.correlations[idx]
 
 
 
-    def plot(self, style, fig=None, legend=False, **kwargs):
+    def plot(self, style, fig=None, legend=False, sec_wid=0.8, distance_spacing=False, distance_labels=[], **kwargs):
         """
         Plot a fence diagram
 
@@ -111,16 +126,31 @@ class Fence:
 
         legend : boolean
             Whether or not to include a legend for facies
+
+        sec_wid : float (0, 1]
+            width of section as a fraction of the columns containing the sections.
+            1 means that the right limit of the section will be adjacent to the left
+            limit of the subsequent section.
+
+        distance_spacing : boolean
+            whether or not to scale the distances between sections according to the
+            distances between self.coordinates
+
+        distance labels : 1d array like
+            length is (n_sections - 1) and permits manual labeling of distances 
+            sections for schematic distances
         """
         # set up axes to plot sections into (will share vertical coordinates)
         if fig==None:
             fig = plt.figure(**kwargs)
         min_height = np.min([section.base_height[0] for section in self.sections])
         max_height = np.max([section.top_height[-1] for section in self.sections])
+
+        # given distances
         
         axes = []
         for ii in range(self.n_sections):
-            axes.append(fig.add_subplot(1, self.n_sections, ii+1, xlim=[0, 1], ylim=[min_height, max_height]))
+            axes.append(fig.add_subplot(1, self.n_sections, ii+1))
 
         # then plot sections
         for ii, section in enumerate(self.sections):
@@ -256,11 +286,11 @@ class Section:
 
         # initialize
         if ax==None:
-            ax = plt.axes(ylim=[self.base_height[0], self.top_height[-1]])
+            ax = plt.axes()
 
         # determine the axis height and limits first
         # ax_height = style.height_scaling_factor * section.total_thickness
-        # ax.set_ylim(0, self.total_thickness)
+        ax.set_ylim([self.base_height[0], self.top_height[-1]])
 
         # initiate counting of the stratigraphic height
         strat_height = self.base_height[0]
