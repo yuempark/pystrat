@@ -100,7 +100,12 @@ class Fence:
         coordinates = np.array(coordinates)
         if len(coordinates) != 0:
             assert len(coordinates) == self.n_sections, 'Number of section distances should match number of sections'
-        self.coordinates = coordinates
+        
+        # if coordinates not provided, assume sections are equally spaced in order provided
+        if len(coordinates) == 0:
+            self.coordinates = np.cumsum(np.ones(self.n_sections))
+        else:
+            self.coordinates = coordinates
 
         # order sections by coordinates
         if len(self.coordinates) > 0:
@@ -113,7 +118,10 @@ class Fence:
 
 
 
-    def plot(self, style, fig=None, legend=False, sec_wid=0.8, distance_spacing=False, distance_labels=[], **kwargs):
+    def plot(self, style, fig=None, legend=False, sec_wid=0.8, distance_spacing=False, 
+             plot_distances=[], 
+             distance_labels=False, 
+             **kwargs):
         """
         Plot a fence diagram
 
@@ -135,11 +143,16 @@ class Fence:
 
         distance_spacing : boolean
             whether or not to scale the distances between sections according to the
-            distances between self.coordinates
+            distances between self.coordinates, or plot_distances, if set
 
-        distance labels : 1d array like
+        plot_distances : 1d array like
+            distances between sections to use for plotting. length is one less than
+            n_sections. 
+
+        distance labels : 1d array like or boolean
             length is (n_sections - 1) and permits manual labeling of distances 
-            sections for schematic distances
+            sections for schematic distances. if true, uses actual distances between
+            sections.
         """
         # set up axes to plot sections into (will share vertical coordinates)
         if fig==None:
@@ -150,10 +163,18 @@ class Fence:
         # if spacing sections realistically, set up axes as such        
         axes = []
         n_axes = self.n_sections + legend
+        # if user wants non-uniform spacing between sections in fence diagram
         if distance_spacing:
             # distances between sections
-            distances = np.diff(self.coordinates)
-            beta = np.min(distances)/(np.max(self.coordinates)-np.min(self.coordinates))
+            if len(plot_distances) == 0:
+                distances = np.diff(self.coordinates)
+                coordinates = self.coordinates
+            else:
+                assert len(plot_distances)==(self.n_sections-1), 'length of plot_distances must be n_sections - 1'
+                distances = plot_distances
+                coordinates = np.insert(np.cumsum(plot_distances), 0, 0)
+
+            beta = np.min(distances)/(np.max(coordinates)-np.min(coordinates))
             if legend:
                 # x is width of section axes in figure coordinates
                 x = beta*sec_wid/(1 + beta + beta*sec_wid)
@@ -164,14 +185,20 @@ class Fence:
                 D = 1 - x
 
             # now set up axis in figure coordinates
-            coordinates = self.coordinates - np.min(self.coordinates)  # center coordinates
+            coordinates = coordinates - np.min(coordinates)  # center coordinates
             ax_left_coords = coordinates/np.max(coordinates) * D
             for ii in range(n_axes):
-                axes.append(plt.axes([ax_left_coords[ii], 0, x*sec_wid, 1], xlim=[0,1])) 
-            
+                axes.append(plt.axes([ax_left_coords[ii], 0, x*sec_wid, 1], xlim=[0,1]))
+
+        # if user wants uniform spacing between sections in fence diagram  
         else:
             for ii in range(n_axes):
                 axes.append(fig.add_subplot(1, n_axes, ii+1))
+
+        # DEBUG
+        # from matplotlib.patches import draw_bbox
+        # for ax in axes:
+        #     draw_bbox(ax.get_window_extent())
 
         # enforce axis limits before plotting to maintain swatch scaling
         for ii, ax in enumerate(axes):
@@ -186,7 +213,7 @@ class Fence:
         for ii, ax in enumerate(axes):
             # ax.set_xlim([0, 1])
             # ax.set_ylim([min_height, max_height])
-            ax.set_title(self.sections[ii].name)
+            ax.set_title(self.sections[ii].name, rotation=45)
 
         # clean up plotting
         for ii in range(1, self.n_sections):
@@ -197,6 +224,22 @@ class Fence:
         for ii in range(self.n_sections):
             axes[ii].get_xaxis().set_visible(False)
             axes[ii].spines['bottom'].set_visible(False)
+
+        if (distance_labels == True) or (len(distance_labels) > 0):
+            if type(distance_labels) == bool:
+                distance_labels = np.diff(self.coordinates)
+            else:
+                assert len(distance_labels) == (self.n_sections-1), 'incorrect number of distance labels'
+            for ii, distance in enumerate(distance_labels):
+                # get text coordinates in fractional figure coordinate space
+                cur_ax_bbox = axes[ii].get_window_extent()
+                nex_ax_bbox = axes[ii+1].get_window_extent()
+                cur_ax_bbox_fig =  fig.transFigure.inverted().transform(cur_ax_bbox)
+                nex_ax_bbox_fig =  fig.transFigure.inverted().transform(nex_ax_bbox)
+                cur_x_coord = nex_ax_bbox_fig[1, 0] - (nex_ax_bbox_fig[0, 0] - cur_ax_bbox_fig[1, 0])/2
+
+                cur_y_coord = cur_ax_bbox_fig[1, 1]
+                plt.annotate(distance, (cur_x_coord, cur_y_coord), xycoords='figure fraction', ha='right')
 
 
 
