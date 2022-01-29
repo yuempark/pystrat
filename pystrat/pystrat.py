@@ -30,6 +30,7 @@ import copy
 import warnings
 from matplotlib.patches import Rectangle
 import matplotlib.patches as patches
+from matplotlib.patches import ConnectionPatch
 from mpl_toolkits.axes_grid1 import Divider, Size
 from PIL import Image
 
@@ -88,10 +89,6 @@ class Fence:
             assert len(datums) == self.n_sections, 'Number of datums should equal number of sections'
         self.datums = datums
 
-        # apply datums as shift to sections
-        for ii in range(self.n_sections):
-            self.sections[ii].shift_heights(-self.datums[ii])
-
         correlations = np.array(correlations)
         if len(correlations) != 0:
             assert correlations.shape[0] == self.n_sections, 'Number of correlated horizons should match number of sections'
@@ -107,7 +104,7 @@ class Fence:
         else:
             self.coordinates = coordinates
 
-        # order sections by coordinates
+        # order sections, correlations, datums by coordinates
         if len(self.coordinates) > 0:
             idx = np.argsort(self.coordinates)
             self.coordinates = self.coordinates[idx]
@@ -116,11 +113,17 @@ class Fence:
             if len(self.correlations) > 0:
                 self.correlations = self.correlations[idx]
 
+        # apply datums as shift to sections and correlations
+        for ii in range(self.n_sections):
+            self.sections[ii].shift_heights(-self.datums[ii])
+            if len(self.correlations) > 0:
+                self.correlations[ii, :] = self.correlations[ii, :] - self.datums[ii] 
 
 
     def plot(self, style, fig=None, legend=False, sec_wid=0.8, distance_spacing=False, 
              plot_distances=[], 
-             distance_labels=False, 
+             distance_labels=False,
+             plot_correlations=False,
              **kwargs):
         """
         Plot a fence diagram
@@ -153,6 +156,9 @@ class Fence:
             length is (n_sections - 1) and permits manual labeling of distances 
             sections for schematic distances. if true, uses actual distances between
             sections.
+
+        plot_correlations : boolean
+            whether or not to plot correlated horizons
         """
         # set up axes to plot sections into (will share vertical coordinates)
         if fig==None:
@@ -215,7 +221,7 @@ class Fence:
             # ax.set_ylim([min_height, max_height])
             ax.set_title(self.sections[ii].name, rotation=45)
 
-        # clean up plotting
+        # clean up plotting sections
         for ii in range(1, self.n_sections):
             # axes[ii].set_yticklabels = []
             # axes[ii].set_ylabel = None
@@ -225,7 +231,28 @@ class Fence:
             axes[ii].get_xaxis().set_visible(False)
             axes[ii].spines['bottom'].set_visible(False)
 
-        if (distance_labels == True) or (len(distance_labels) > 0):
+        # plot correlated beds as connections
+        if plot_correlations:
+            for ii in range(self.correlations.shape[1]):
+                for jj in range(self.n_sections-1):
+                    xyA = [1, self.correlations[jj, ii]]
+                    xyB = [0, self.correlations[jj+1, ii]]
+                    if np.any(np.isnan(xyA)) or np.any(np.isnan(xyB)):
+                        continue
+                    con = ConnectionPatch(xyA=xyA, coordsA=axes[jj].transData, xyB=xyB, coordsB=axes[jj+1].transData)
+                    fig.add_artist(con)
+
+        # plot datum
+        for jj in range(self.n_sections-1):
+            xyA = [1, 0]
+            xyB = [0, 0]
+            con = ConnectionPatch(xyA=xyA, coordsA=axes[jj].transData, xyB=xyB, coordsB=axes[jj+1].transData)
+            fig.add_artist(con)
+
+        # label distances between sections
+        if distance_labels == False:
+            pass
+        elif (distance_labels == True) or (len(distance_labels) > 0):
             if type(distance_labels) == bool:
                 distance_labels = np.diff(self.coordinates)
             else:
