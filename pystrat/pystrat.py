@@ -162,7 +162,10 @@ class Fence:
         """
         # set up axes to plot sections into (will share vertical coordinates)
         if fig==None:
+            fig_provided = False
             fig = plt.figure(**kwargs)
+        else:
+            fig_provided = True
         min_height = np.min([section.base_height[0] for section in self.sections])
         max_height = np.max([section.top_height[-1] for section in self.sections])
 
@@ -193,6 +196,9 @@ class Fence:
             # now set up axis in figure coordinates
             coordinates = coordinates - np.min(coordinates)  # center coordinates
             ax_left_coords = coordinates/np.max(coordinates) * D
+            if legend:
+                delta = beta*D
+                ax_left_coords = np.append(ax_left_coords, D+delta)
             for ii in range(n_axes):
                 axes.append(plt.axes([ax_left_coords[ii], 0, x*sec_wid, 1], xlim=[0,1]))
 
@@ -207,19 +213,19 @@ class Fence:
         #     draw_bbox(ax.get_window_extent())
 
         # enforce axis limits before plotting to maintain swatch scaling
-        for ii, ax in enumerate(axes):
-            ax.set_xlim([0, 1])
-            ax.set_ylim([min_height, max_height])
+        for ii in range(self.n_sections):
+            axes[ii].set_xlim([0, 1])
+            axes[ii].set_ylim([min_height, max_height])
 
         # then plot sections
         for ii, section in enumerate(self.sections):
             section.plot(style, ax=axes[ii])
 
         # then move and scale axes so that vertical coordinate is consistent and datum is at same height in figure
-        for ii, ax in enumerate(axes):
+        for ii in range(self.n_sections):
             # ax.set_xlim([0, 1])
             # ax.set_ylim([min_height, max_height])
-            ax.set_title(self.sections[ii].name, rotation=45)
+            axes[ii].set_title(self.sections[ii].name, rotation=45)
 
         # clean up plotting sections
         for ii in range(1, self.n_sections):
@@ -268,6 +274,12 @@ class Fence:
                 cur_y_coord = cur_ax_bbox_fig[1, 1]
                 plt.annotate(distance, (cur_x_coord, cur_y_coord), xycoords='figure fraction', ha='right')
 
+        # plot and format legend
+        if legend:
+            pass
+        
+        if not fig_provided:
+            return fig
 
 
 class Section:
@@ -802,53 +814,40 @@ class Style():
     Organizes the plotting style for the lithostratigraphy.
     """
 
-    def __init__(self,
-                 color_attribute, color_labels, color_values,
-                 width_attribute, width_labels, width_values,
+    def __init__(self, labels, color_values, width_values,
+                 style_attribute='facies',
                  swatch_values=None):
         """
-        Initialize Style with the seven required attributes.
+        Initialize Style
 
         Note that compatibility of a Style with a Section is not checked
         until explicitly called, or plotting is attempted.
 
         Parameters
         ----------
-        color_attribute : string
-            Attribute name from which the color labels are derived. When
+        style_attribute : string (default 'facies')
+            Section attribute name on which styling is based. When
             plotting a Section, the Section must have this attribute.
 
-        color_labels : 1d array_like
-            The labels to which colors are assigned. When plotting a
-            Section, values within the color_attribute of that Section
+        labels : 1d array_like
+            The labels to which colors and widths are assigned. When plotting a
+            Section, values within the style_attribute of that Section
             must form a subset of the values within this array_like.
 
         color_values : array_like
             The colors that will be assigned to the associated labels.
             Values must be interpretable by matplotlib.
 
-        width_attribute : string
-            Attribute name from which the width labels are derived. When
-            plotting a Section, the Section must have this attribute.
-
-        width_labels : 1d array_like
-            The labels to which widths are assigned. When plotting a
-            Section, values within the width_attribute of that Section
-            must form a subset of the values within this array_like.
-
         width_values : 1d array_like of floats
             The widths that will be assigned to the associated labels.
             Values must be between 0 and 1.
 
         swatch_values : 1d array_like
-            USGS swatch codes (see swatches/png/). Swatches are mapped to 
-            the same section attribute as color and use the same labels as
-            color_labels
+            USGS swatch codes (see swatches/png/) for labels
 
         """
         # convert to arrays and check the dimensionality
-        color_labels = attribute_convert_and_check(color_labels)
-        width_labels = attribute_convert_and_check(width_labels)
+        labels = attribute_convert_and_check(labels)
         width_values = attribute_convert_and_check(width_values)
 
         swatch_values = np.asarray(swatch_values).ravel().tolist()
@@ -864,25 +863,18 @@ class Style():
             raise Exception('Width values must be floats between 0 and 1.')
 
         # assign the attributes
-        self.color_attribute = color_attribute
-        self.color_labels = color_labels
+        self.style_attribute = style_attribute
+        self.labels = labels
         self.color_values = color_values
-        self.width_attribute = width_attribute
-        self.width_labels = width_labels
         self.width_values = width_values
         self.swatch_values = swatch_values
 
         # add some other useful attributes
-        self.n_color_labels = len(color_labels)
-        self.n_width_labels = len(width_labels)
+        self.n_labels = len(labels)
 
-    def plot_legend(self, legend_unit_height=0.25, figsize=(6,6)):
+    def plot_legend(self, ax=None, legend_unit_height=0.25):
         """
         Plot a legend for this Style object.
-
-        If the color and width labels are the same, a single legend will
-        be created. Otherwise, two legends will be created - one with
-        the color labels, and the other with the width labels.
 
         Parameters
         ----------
@@ -900,162 +892,71 @@ class Style():
         """
 
         # extract attributes
-        color_labels = self.color_labels
-        width_labels = self.width_labels
+        labels = self.labels
         color_values = self.color_values
         width_values = self.width_values
         swatch_values = self.swatch_values
 
-        # if the color and width labels are different
-        if np.any(~(color_labels == width_labels)):
+        # sort by width
+        width_sort_inds = np.argsort(width_values)
+        labels = labels[width_sort_inds]
+        color_values = color_values[width_sort_inds]
+        width_values = width_values[width_sort_inds]
 
-            # sort the widths
-            width_sort_inds = np.argsort(width_values)
-            width_labels = width_labels[width_sort_inds]
-            width_values = width_values[width_sort_inds]
+        if swatch_values != None:
+            swatch_values = [swatch_values[x] for x in width_sort_inds]
 
-            # initialize the figure
-            fig, ax = plt.subplots(nrows=1, ncols=2, sharey=True, figsize=figsize)
+        # initiate ax
+        if ax == None:
+            ax = plt.axes()
 
-            # determine the axis height and limits first
-            if self.n_color_labels > self.n_width_labels:
-                ax_height = legend_unit_height * self.n_color_labels
-                ax[0].set_ylim(0, self.n_color_labels)
-                ax[1].set_ylim(0, self.n_color_labels)
-            else:
-                ax_height = legend_unit_height * self.n_width_labels
-                ax[0].set_ylim(0, self.n_width_labels)
-                ax[1].set_ylim(0, self.n_width_labels)
+        # determine the axis height and limits first
+        ax_height = legend_unit_height * self.n_labels
+        ax.set_ylim(0, self.n_labels)
+        ax.set_xlim([0, 1])
 
-            # plot the colors
-            strat_height_colors = 0
+        # initiate counting of the stratigraphic height
+        strat_height = 0
 
-            for i in range(len(color_labels)):
+        # loop over each item
+        for i in range(len(labels)):
 
-                # create the rectangle - with thickness of 1
-                ax[0].add_patch(Rectangle((0.0,strat_height_colors), 1,
-                                          1, facecolor=color_values[i], edgecolor='k'))
+            # create the rectangle - with thickness of 1
+            ax.add_patch(Rectangle((0.0,strat_height), width_values[i],
+                                    1, facecolor=color_values[i], edgecolor='k'))
 
-                # if swatch is defined, plot it
-                if swatch_values != None:
-                    if swatch_values[i] != None:
-                        extent = [0, 1, strat_height_colors, strat_height_colors+1]
-                        plot_swatch(swatch_values[i], extent, ax)
-
-                # label the unit
-                ax[0].text(1.2, strat_height_colors+0.5, color_labels[i],
-                           horizontalalignment='left', verticalalignment='center')
-
-                # count the height
-                strat_height_colors = strat_height_colors + 1
-
-            # set the limits
-            ax[0].set_xlim(0,1)
-
-            # prettify
-            ax[0].set_xticks([])
-            ax[0].set_yticklabels([])
-            ax[0].set_yticks([])
-
-            # plot the widths
-            strat_height_widths = 0
-
-            for i in range(len(width_labels)):
-
-                # create the rectangle
-                ax[1].add_patch(Rectangle((0.0,strat_height_widths), width_values[i],
-                                          1, facecolor='grey', edgecolor='k'))
-
-                # the label
-                ax[1].text(-0.01, strat_height_widths+0.5, width_labels[i],
-                           horizontalalignment='right', verticalalignment='center')
-
-                # count the height
-                strat_height_widths = strat_height_widths + 1
-
-            # prettify
-            ax[1].set_xlim(0,1)
-            ax[1].set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1])
-            for label in ax[1].get_xticklabels():
-                label.set_rotation(270)
-                label.set_ha('center')
-                label.set_va('top')
-            ax[1].set_axisbelow(True)
-            ax[1].xaxis.grid(ls='--')
-            ax[1].set_yticklabels([])
-            ax[1].set_yticks([])
-            ax[1].spines['top'].set_visible(False)
-            ax[1].spines['right'].set_visible(False)
-
-            # turning the spines off creates some clipping mask issues
-            # so just turn the clipping masks off
-            for obj in fig.findobj():
-                obj.set_clip_on(False)
-
-        # if the color and width labels are the same
-        else:
-
-            # sort by width
-            width_sort_inds = np.argsort(width_values)
-            color_labels = color_labels[width_sort_inds]
-            width_labels = width_labels[width_sort_inds]
-            color_values = color_values[width_sort_inds]
-            width_values = width_values[width_sort_inds]
-            # import pdb
-            # pdb.set_trace()
+            # if swatch is defined, plot it
             if swatch_values != None:
-                swatch_values = [swatch_values[x] for x in width_sort_inds]
+                if swatch_values[i] != None:
+                    extent = [0, width_values[i], strat_height, strat_height+1]
+                    plot_swatch(swatch_values[i], extent, ax)
 
-            # initiate fig and ax
-            fig, ax = plt.subplots(figsize=figsize)
+            # label the unit
+            ax.text(-0.01, strat_height+0.5, labels[i],
+                    horizontalalignment='right', verticalalignment='center')
 
-            # determine the axis height and limits first
-            ax_height = legend_unit_height * self.n_color_labels
-            ax.set_ylim(0, self.n_color_labels)
+            # count the stratigraphic height
+            strat_height = strat_height + 1
 
-            # initiate counting of the stratigraphic height
-            strat_height = 0
+        # prettify
+        ax.set_xlim(0,1)
+        ax.set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1])
+        for label in ax.get_xticklabels():
+            label.set_rotation(270)
+            label.set_ha('center')
+            label.set_va('top')
+        ax.set_axisbelow(True)
+        ax.xaxis.grid(ls='--')
+        ax.set_yticklabels([])
+        ax.set_yticks([])
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
 
-            # loop over each item
-            for i in range(len(color_labels)):
+        # turning the spines off creates some clipping mask issues
+        # so just turn the clipping masks off
+        for obj in ax.findobj():
+            obj.set_clip_on(False)
 
-                # create the rectangle - with thickness of 1
-                ax.add_patch(Rectangle((0.0,strat_height), width_values[i],
-                                       1, facecolor=color_values[i], edgecolor='k'))
-
-                # if swatch is defined, plot it
-                if swatch_values != None:
-                    if swatch_values[i] != None:
-                        extent = [0, width_values[i], strat_height, strat_height+1]
-                        plot_swatch(swatch_values[i], extent, ax)
-
-                # label the unit
-                ax.text(-0.01, strat_height+0.5, color_labels[i],
-                        horizontalalignment='right', verticalalignment='center')
-
-                # count the stratigraphic height
-                strat_height = strat_height + 1
-
-            # prettify
-            ax.set_xlim(0,1)
-            ax.set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1])
-            for label in ax.get_xticklabels():
-                label.set_rotation(270)
-                label.set_ha('center')
-                label.set_va('top')
-            ax.set_axisbelow(True)
-            ax.xaxis.grid(ls='--')
-            ax.set_yticklabels([])
-            ax.set_yticks([])
-            ax.spines['top'].set_visible(False)
-            ax.spines['right'].set_visible(False)
-
-            # turning the spines off creates some clipping mask issues
-            # so just turn the clipping masks off
-            for obj in fig.findobj():
-                obj.set_clip_on(False)
-
-        return fig, ax
 
 #################
 ### FUNCTIONS ###
