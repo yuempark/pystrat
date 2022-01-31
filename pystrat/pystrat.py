@@ -390,8 +390,7 @@ class Section:
             The linewidth when drawing the stratigraphic section.
         """
         # get the attributes - implicitly checks if the attributes exist
-        color_attribute = getattr(self, style.color_attribute)
-        width_attribute = getattr(self, style.width_attribute)
+        style_attribute = getattr(self, style.style_attribute)
 
         # initialize
         if ax==None:
@@ -411,12 +410,10 @@ class Section:
             this_thickness = self.thicknesses[i]
 
             # loop over the elements in Style to get the color and width
-            for j in range(style.n_color_labels):
-                if color_attribute[i] == style.color_labels[j]:
+            for j in range(style.n_labels):
+                if style_attribute[i] == style.labels[j]:
                     this_color = style.color_values[j]
-            for j in range(style.n_width_labels):
-                if width_attribute[i] == style.width_labels[j]:
-                    this_width = style.width_values[j]
+                    this_width = style.width_values[j]                  
 
             # create the rectangle
             ax.add_patch(Rectangle((0.0,strat_height), this_width, this_thickness,
@@ -424,8 +421,8 @@ class Section:
 
             # if swatch is defined, plot it
             if style.swatch_values != None:
-                for j in range(style.n_color_labels):
-                    if color_attribute[i] == style.color_labels[j]:
+                for j in range(style.n_labels):
+                    if style_attribute[i] == style.labels[j]:
                         this_swatch = style.swatch_values[j]
                         if this_swatch == None:
                             continue
