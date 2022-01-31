@@ -242,11 +242,15 @@ class Fence:
         for ii, section in enumerate(self.sections):
             section.plot(style, ax=axes[ii])
 
+        # plot and format legend
+        if legend:
+            style.plot_legend(ax=axes[-1])
+
         # then move and scale axes so that vertical coordinate is consistent and datum is at same height in figure
         for ii in range(self.n_sections):
             # ax.set_xlim([0, 1])
             # ax.set_ylim([min_height, max_height])
-            axes[ii].set_title(self.sections[ii].name, rotation=45)
+            axes[ii].set_title(self.sections[ii].name, rotation=90)
 
         # clean up plotting sections
         for ii in range(1, self.n_sections):
@@ -285,19 +289,16 @@ class Fence:
             else:
                 assert len(distance_labels) == (self.n_sections-1), 'incorrect number of distance labels'
             for ii, distance in enumerate(distance_labels):
-                # get text coordinates in fractional figure coordinate space
-                cur_ax_bbox = axes[ii].get_window_extent()
-                nex_ax_bbox = axes[ii+1].get_window_extent()
+                cur_ax_bbox = axes[ii].get_tightbbox(fig.canvas.get_renderer())
+                nex_ax_bbox = axes[ii+1].get_tightbbox(fig.canvas.get_renderer())
                 cur_ax_bbox_fig =  fig.transFigure.inverted().transform(cur_ax_bbox)
                 nex_ax_bbox_fig =  fig.transFigure.inverted().transform(nex_ax_bbox)
                 cur_x_coord = nex_ax_bbox_fig[1, 0] - (nex_ax_bbox_fig[0, 0] - cur_ax_bbox_fig[1, 0])/2
 
-                cur_y_coord = cur_ax_bbox_fig[1, 1]
-                plt.annotate(distance, (cur_x_coord, cur_y_coord), xycoords='figure fraction', ha='right')
-
-        # plot and format legend
-        if legend:
-            style.plot_legend(ax=axes[-1])
+                topright = axes[0].transData.transform([0, axes[0].get_ylim()[1]])
+                print(axes[0].get_ylim()[1])
+                cur_y_coord = fig.transFigure.inverted().transform(topright)[1]+0.025
+                plt.annotate(distance, (cur_x_coord, cur_y_coord), xycoords='figure fraction', ha='left')
         
         if not fig_provided:
             return fig
