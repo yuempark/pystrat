@@ -120,7 +120,12 @@ class Fence:
                 self.correlations[ii, :] = self.correlations[ii, :] - self.datums[ii] 
 
 
-    def plot(self, style, fig=None, legend=False, sec_wid=0.8, distance_spacing=False, 
+    def plot(self, style, fig=None, 
+             legend=False, 
+             legend_wid=0.1,
+             legend_hei=0.5,
+             sec_wid=0.8, 
+             distance_spacing=False, 
              plot_distances=[], 
              distance_labels=False,
              plot_correlations=False,
@@ -138,6 +143,12 @@ class Fence:
 
         legend : boolean
             Whether or not to include a legend for facies
+
+        legend_wid : float [0, 1]
+            Fractional width (figure coordinates) that legend occupies in fence diagram
+
+        legend_hei : float [0, 1]
+            fractional height of legend
 
         sec_wid : float (0, 1]
             width of section as a fraction of the columns containing the sections.
@@ -171,7 +182,7 @@ class Fence:
 
         # if spacing sections realistically, set up axes as such        
         axes = []
-        n_axes = self.n_sections + legend
+        n_axes = self.n_sections
         # if user wants non-uniform spacing between sections in fence diagram
         if distance_spacing:
             # distances between sections
@@ -186,9 +197,12 @@ class Fence:
             beta = np.min(distances)/(np.max(coordinates)-np.min(coordinates))
             if legend:
                 # x is width of section axes in figure coordinates
-                x = beta*sec_wid/(1 + beta + beta*sec_wid)
+                # x = beta*sec_wid/(1 + beta + beta*sec_wid)
+                x = beta*sec_wid*(1-legend_wid)/(1 + beta*sec_wid)
                 # D is width in figure coordinates of area to space sections
-                D = (1-x)/(1+beta)
+                # D = (1-x)/(1+beta)
+                D = 1-x-legend_wid
+                delta = beta*D
             else:
                 x = beta*sec_wid/(1 + beta*sec_wid)
                 D = 1 - x
@@ -196,16 +210,23 @@ class Fence:
             # now set up axis in figure coordinates
             coordinates = coordinates - np.min(coordinates)  # center coordinates
             ax_left_coords = coordinates/np.max(coordinates) * D
-            if legend:
-                delta = beta*D
-                ax_left_coords = np.append(ax_left_coords, D+delta)
-            for ii in range(n_axes):
+            
+            for ii in range(self.n_sections):
                 axes.append(plt.axes([ax_left_coords[ii], 0, x*sec_wid, 1], xlim=[0,1]))
 
         # if user wants uniform spacing between sections in fence diagram  
         else:
-            for ii in range(n_axes):
-                axes.append(fig.add_subplot(1, n_axes, ii+1))
+            x = sec_wid*(1-legend_wid)/(self.n_sections-1+sec_wid)
+            D = 1-x-legend_wid
+            delta = D/(self.n_sections-1)
+            ax_left_coords = np.arange(0, D+delta, delta)
+            for ii in range(self.n_sections):
+                # axes.append(fig.add_subplot(1, n_axes, ii+1))
+                axes.append(plt.axes([ax_left_coords[ii], 0, x*sec_wid, 1], xlim=[0,1]))
+
+        if legend:
+                leg_left_coord = 1-delta
+                axes.append(plt.axes([leg_left_coord, 0, x*sec_wid, legend_hei], xlim=[0, 1]))
 
         # DEBUG
         # from matplotlib.patches import draw_bbox
@@ -276,7 +297,7 @@ class Fence:
 
         # plot and format legend
         if legend:
-            pass
+            style.plot_legend(ax=axes[-1])
         
         if not fig_provided:
             return fig
