@@ -25,7 +25,6 @@ import matplotlib.pyplot as plt
 import os
 import copy
 
-
 # import additional modules
 import warnings
 from matplotlib.patches import Rectangle
@@ -34,23 +33,27 @@ from matplotlib.patches import ConnectionPatch
 from mpl_toolkits.axes_grid1 import Divider, Size
 from PIL import Image
 
-
 ##
 ## Global vars
 ##
 mod_dir = os.path.dirname(os.path.realpath(__file__))
 
-
 ###############
 ### CLASSES ###
 ###############
+
 
 class Fence:
     """
     Organizes sections according to a shared datum
     """
 
-    def __init__(self, sections, datums=[], correlations=[], coordinates=[], legend=False):
+    def __init__(self,
+                 sections,
+                 datums=[],
+                 correlations=[],
+                 coordinates=[],
+                 legend=False):
         """
         Initialize Section with the two primary attributes.
 
@@ -82,22 +85,27 @@ class Fence:
         self.sections = [copy.deepcopy(section) for section in sections]
         datums = np.array(datums)
         if len(datums) == 0:
-            datums = np.zeros(self.n_sections) 
+            datums = np.zeros(self.n_sections)
             for ii in range(self.n_sections):
                 datums[ii] = sections[ii].base_height[0]
         else:
-            assert len(datums) == self.n_sections, 'Number of datums should equal number of sections'
+            assert len(
+                datums
+            ) == self.n_sections, 'Number of datums should equal number of sections'
         self.datums = datums
 
         correlations = np.array(correlations)
         if len(correlations) != 0:
-            assert correlations.shape[0] == self.n_sections, 'Number of correlated horizons should match number of sections'
+            assert correlations.shape[
+                0] == self.n_sections, 'Number of correlated horizons should match number of sections'
         self.correlations = correlations
 
         coordinates = np.array(coordinates)
         if len(coordinates) != 0:
-            assert len(coordinates) == self.n_sections, 'Number of section distances should match number of sections'
-        
+            assert len(
+                coordinates
+            ) == self.n_sections, 'Number of section distances should match number of sections'
+
         # if coordinates not provided, assume sections are equally spaced in order provided
         if len(coordinates) == 0:
             self.coordinates = np.cumsum(np.ones(self.n_sections))
@@ -117,16 +125,18 @@ class Fence:
         for ii in range(self.n_sections):
             self.sections[ii].shift_heights(-self.datums[ii])
             if len(self.correlations) > 0:
-                self.correlations[ii, :] = self.correlations[ii, :] - self.datums[ii] 
+                self.correlations[
+                    ii, :] = self.correlations[ii, :] - self.datums[ii]
 
-
-    def plot(self, style, fig=None, 
-             legend=False, 
+    def plot(self,
+             style,
+             fig=None,
+             legend=False,
              legend_wid=0.1,
              legend_hei=0.5,
-             sec_wid=0.8, 
-             distance_spacing=False, 
-             plot_distances=[], 
+             sec_wid=0.8,
+             distance_spacing=False,
+             plot_distances=[],
              distance_labels=False,
              plot_correlations=False,
              **kwargs):
@@ -172,15 +182,17 @@ class Fence:
             whether or not to plot correlated horizons
         """
         # set up axes to plot sections into (will share vertical coordinates)
-        if fig==None:
+        if fig == None:
             fig_provided = False
             fig = plt.figure(**kwargs)
         else:
             fig_provided = True
-        min_height = np.min([section.base_height[0] for section in self.sections])
-        max_height = np.max([section.top_height[-1] for section in self.sections])
+        min_height = np.min(
+            [section.base_height[0] for section in self.sections])
+        max_height = np.max(
+            [section.top_height[-1] for section in self.sections])
 
-        # if spacing sections realistically, set up axes as such        
+        # if spacing sections realistically, set up axes as such
         axes = []
         n_axes = self.n_sections
         # if user wants non-uniform spacing between sections in fence diagram
@@ -190,48 +202,53 @@ class Fence:
                 distances = np.diff(self.coordinates)
                 coordinates = self.coordinates
             else:
-                assert len(plot_distances)==(self.n_sections-1), 'length of plot_distances must be n_sections - 1'
+                assert len(plot_distances) == (
+                    self.n_sections -
+                    1), 'length of plot_distances must be n_sections - 1'
                 distances = plot_distances
                 coordinates = np.insert(np.cumsum(plot_distances), 0, 0)
 
-            beta = np.min(distances)/(np.max(coordinates)-np.min(coordinates))
+            beta = np.min(distances) / (np.max(coordinates) -
+                                        np.min(coordinates))
             if legend:
                 # x is width of section axes in figure coordinates
                 # x = beta*sec_wid/(1 + beta + beta*sec_wid)
-                x = beta*sec_wid*(1-legend_wid)/(1 + beta*sec_wid)
+                x = beta * sec_wid * (1 - legend_wid) / (1 + beta * sec_wid)
                 # D is width in figure coordinates of area to space sections
                 # D = (1-x)/(1+beta)
-                D = 1-x-legend_wid
-                delta = beta*D
+                D = 1 - x - legend_wid
+                delta = beta * D
             else:
-                x = beta*sec_wid/(1 + beta*sec_wid)
+                x = beta * sec_wid / (1 + beta * sec_wid)
                 D = 1 - x
 
             # now set up axis in figure coordinates
-            coordinates = coordinates - np.min(coordinates)  # center coordinates
-            ax_left_coords = coordinates/np.max(coordinates) * D
-            
-            for ii in range(self.n_sections):
-                axes.append(plt.axes([ax_left_coords[ii], 0, x*sec_wid, 1], xlim=[0,1]))
+            coordinates = coordinates - np.min(
+                coordinates)  # center coordinates
+            ax_left_coords = coordinates / np.max(coordinates) * D
 
-        # if user wants uniform spacing between sections in fence diagram  
+            for ii in range(self.n_sections):
+                axes.append(
+                    plt.axes([ax_left_coords[ii], 0, x * sec_wid, 1],
+                             xlim=[0, 1]))
+
+        # if user wants uniform spacing between sections in fence diagram
         else:
-            x = sec_wid*(1-legend_wid)/(self.n_sections-1+sec_wid)
-            D = 1-x-legend_wid
-            delta = D/(self.n_sections-1)
-            ax_left_coords = np.arange(0, D+delta, delta)
+            x = sec_wid * (1 - legend_wid) / (self.n_sections - 1 + sec_wid)
+            D = 1 - x - legend_wid
+            delta = D / (self.n_sections - 1)
+            ax_left_coords = np.arange(0, D + delta, delta)
             for ii in range(self.n_sections):
                 # axes.append(fig.add_subplot(1, n_axes, ii+1))
-                axes.append(plt.axes([ax_left_coords[ii], 0, x*sec_wid, 1], xlim=[0,1]))
+                axes.append(
+                    plt.axes([ax_left_coords[ii], 0, x * sec_wid, 1],
+                             xlim=[0, 1]))
 
         if legend:
-                leg_left_coord = 1-delta
-                axes.append(plt.axes([leg_left_coord, 0, x*sec_wid, legend_hei], xlim=[0, 1]))
-
-        # DEBUG
-        # from matplotlib.patches import draw_bbox
-        # for ax in axes:
-        #     draw_bbox(ax.get_window_extent())
+            leg_left_coord = 1 - delta
+            axes.append(
+                plt.axes([leg_left_coord, 0, x * sec_wid, legend_hei],
+                         xlim=[0, 1]))
 
         # enforce axis limits before plotting to maintain swatch scaling
         for ii in range(self.n_sections):
@@ -245,12 +262,13 @@ class Fence:
         # plot and format legend
         if legend:
             style.plot_legend(ax=axes[-1])
+            axes[-1].set_xticklabels([])
 
         # then move and scale axes so that vertical coordinate is consistent and datum is at same height in figure
         for ii in range(self.n_sections):
             # ax.set_xlim([0, 1])
             # ax.set_ylim([min_height, max_height])
-            axes[ii].set_title(self.sections[ii].name, rotation=90)
+            axes[ii].set_title(self.sections[ii].name, rotation=90, ha='right')
 
         # clean up plotting sections
         for ii in range(1, self.n_sections):
@@ -265,19 +283,25 @@ class Fence:
         # plot correlated beds as connections
         if plot_correlations:
             for ii in range(self.correlations.shape[1]):
-                for jj in range(self.n_sections-1):
+                for jj in range(self.n_sections - 1):
                     xyA = [1, self.correlations[jj, ii]]
-                    xyB = [0, self.correlations[jj+1, ii]]
+                    xyB = [0, self.correlations[jj + 1, ii]]
                     if np.any(np.isnan(xyA)) or np.any(np.isnan(xyB)):
                         continue
-                    con = ConnectionPatch(xyA=xyA, coordsA=axes[jj].transData, xyB=xyB, coordsB=axes[jj+1].transData)
+                    con = ConnectionPatch(xyA=xyA,
+                                          coordsA=axes[jj].transData,
+                                          xyB=xyB,
+                                          coordsB=axes[jj + 1].transData)
                     fig.add_artist(con)
 
         # plot datum
-        for jj in range(self.n_sections-1):
+        for jj in range(self.n_sections - 1):
             xyA = [1, 0]
             xyB = [0, 0]
-            con = ConnectionPatch(xyA=xyA, coordsA=axes[jj].transData, xyB=xyB, coordsB=axes[jj+1].transData)
+            con = ConnectionPatch(xyA=xyA,
+                                  coordsA=axes[jj].transData,
+                                  xyB=xyB,
+                                  coordsB=axes[jj + 1].transData)
             fig.add_artist(con)
 
         # label distances between sections
@@ -287,19 +311,32 @@ class Fence:
             if type(distance_labels) == bool:
                 distance_labels = np.diff(self.coordinates)
             else:
-                assert len(distance_labels) == (self.n_sections-1), 'incorrect number of distance labels'
-            for ii, distance in enumerate(distance_labels):
-                cur_ax_bbox = axes[ii].get_tightbbox(fig.canvas.get_renderer())
-                nex_ax_bbox = axes[ii+1].get_tightbbox(fig.canvas.get_renderer())
-                cur_ax_bbox_fig =  fig.transFigure.inverted().transform(cur_ax_bbox)
-                nex_ax_bbox_fig =  fig.transFigure.inverted().transform(nex_ax_bbox)
-                cur_x_coord = nex_ax_bbox_fig[1, 0] - (nex_ax_bbox_fig[0, 0] - cur_ax_bbox_fig[1, 0])/2
+                assert len(distance_labels) == (
+                    self.n_sections - 1), 'incorrect number of distance labels'
 
-                topright = axes[0].transData.transform([0, axes[0].get_ylim()[1]])
-                print(axes[0].get_ylim()[1])
-                cur_y_coord = fig.transFigure.inverted().transform(topright)[1]+0.025
-                plt.annotate(distance, (cur_x_coord, cur_y_coord), xycoords='figure fraction', ha='left')
-        
+            fig_bbox = fig.get_tightbbox(
+                fig.canvas.get_renderer())._bbox.get_points()
+            x_offset = fig_bbox[0, 0]
+            cur_y_coord = (fig_bbox[1, 1] - fig_bbox[0, 1])
+            wid = fig_bbox[1,0]
+            # hei = fig_bbox[1,1]
+            for ii, distance in enumerate(distance_labels):
+
+                cur_ax_bbox = axes[ii].get_window_extent().get_points()
+                nex_ax_bbox = axes[ii + 1].get_window_extent().get_points()
+                cur_x_coord = nex_ax_bbox[0, 0] - (
+                    nex_ax_bbox[0, 0] - cur_ax_bbox[1, 0]) / 2 - x_offset
+
+                # this value is the factor to account for the fact that the
+                # figure coordinates need to be larger than one for the y
+                # coordinate by the amount that the figur is larger than the 
+                # axis bounding box
+                vert_axis_fact = (cur_y_coord-cur_ax_bbox[1,1])/(2*cur_ax_bbox[1,1]) + 1
+                plt.annotate(distance, (cur_x_coord/wid, vert_axis_fact),
+                             xycoords='figure fraction',
+                             ha='center',
+                             fontsize=11)
+
         if not fig_provided:
             return fig
 
@@ -333,16 +370,18 @@ class Section:
         # check for NaNs, and get rid of them
         thicknesses_nan_mask = np.isnan(thicknesses)
         if np.sum(thicknesses_nan_mask) > 0:
-            warnings.warn('Thickness data contains NaNs. These rows will be '
-                          'automatically removed, but you should check to make '
-                          'sure that this is appropriate for your dataset.')
+            warnings.warn(
+                'Thickness data contains NaNs. These rows will be '
+                'automatically removed, but you should check to make '
+                'sure that this is appropriate for your dataset.')
             thicknesses = thicknesses[~thicknesses_nan_mask]
 
         facies_nan_mask = pd.isnull(facies)
         if np.sum(facies_nan_mask) > 0:
-            warnings.warn('Facies data contains NaNs. These rows will be '
-                          'automatically removed, but you should check to make '
-                          'sure that this is appropriate for your dataset.')
+            warnings.warn(
+                'Facies data contains NaNs. These rows will be '
+                'automatically removed, but you should check to make '
+                'sure that this is appropriate for your dataset.')
             facies = facies[~facies_nan_mask]
 
         # check that the length of the thicknesses and facies match
@@ -371,9 +410,13 @@ class Section:
         self.n_unique_facies = len(np.unique(facies))
 
         # keep track of attributes
-        self.facies_attributes = ['unit_number','thicknesses','base_height','top_height','facies']
-        self.generic_attributes = ['name', 'n_units','total_thickness','unique_facies',
-                                   'n_unique_facies']
+        self.facies_attributes = [
+            'unit_number', 'thicknesses', 'base_height', 'top_height', 'facies'
+        ]
+        self.generic_attributes = [
+            'name', 'n_units', 'total_thickness', 'unique_facies',
+            'n_unique_facies'
+        ]
         self.data_attributes = []
 
     def shift_heights(self, shift):
@@ -395,7 +438,7 @@ class Section:
             data_attribute.height = data_attribute.height + shift
             setattr(self, attribute, data_attribute)
 
-    def plot(self, style,  ax=None, linewidth=1):
+    def plot(self, style, ax=None, linewidth=1):
         """
         Plot this section using a Style object.
 
@@ -415,7 +458,7 @@ class Section:
         style_attribute = getattr(self, style.style_attribute)
 
         # initialize
-        if ax==None:
+        if ax == None:
             ax = plt.axes()
             ax.set_ylim([self.base_height[0], self.top_height[-1]])
 
@@ -435,27 +478,35 @@ class Section:
             for j in range(style.n_labels):
                 if style_attribute[i] == style.labels[j]:
                     this_color = style.color_values[j]
-                    this_width = style.width_values[j]                  
+                    this_width = style.width_values[j]
 
             # create the rectangle
-            ax.add_patch(Rectangle((0.0,strat_height), this_width, this_thickness,
-                        facecolor=this_color, edgecolor='k', linewidth=linewidth))
+            ax.add_patch(
+                Rectangle((0.0, strat_height),
+                          this_width,
+                          this_thickness,
+                          facecolor=this_color,
+                          edgecolor='k',
+                          linewidth=linewidth))
 
             # if swatch is defined, plot it
-            if style.swatch_values != None:
+            if style.swatch_values[0] != None:
                 for j in range(style.n_labels):
                     if style_attribute[i] == style.labels[j]:
                         this_swatch = style.swatch_values[j]
                         if this_swatch == None:
                             continue
-                        extent = [0, this_width, strat_height, strat_height+this_thickness]
+                        extent = [
+                            0, this_width, strat_height,
+                            strat_height + this_thickness
+                        ]
                         plot_swatch(this_swatch, extent, ax)
 
             # count the stratigraphic height
             strat_height = strat_height + this_thickness
 
         # prettify
-        ax.set_xlim(0,1)
+        ax.set_xlim(0, 1)
         ax.set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1])
         for label in ax.get_xticklabels():
             label.set_rotation(270)
@@ -471,7 +522,6 @@ class Section:
         # so just turn the clipping masks off
         for obj in ax.findobj():
             obj.set_clip_on(False)
-
 
     def add_facies_attribute(self, attribute_name, attribute_values):
         """
@@ -533,7 +583,7 @@ class Section:
             Pandas DataFrame with all attributes associated with the
             stratigraphic units.
         """
-        df = pd.DataFrame({'unit_number':np.arange(self.n_units)})
+        df = pd.DataFrame({'unit_number': np.arange(self.n_units)})
 
         for attribute in self.facies_attributes:
             df[attribute] = getattr(self, attribute)
@@ -573,7 +623,8 @@ class Section:
         generic_attributes.append(attribute_name)
         setattr(self, 'generic_attributes', generic_attributes)
 
-    def add_data_attribute(self, attribute_name, attribute_height, attribute_values):
+    def add_data_attribute(self, attribute_name, attribute_height,
+                           attribute_values):
         """
         Add an attribute that is tied to the stratigraphic height, but
         not explicitly tied to the stratigraphic units.
@@ -592,7 +643,8 @@ class Section:
         attribute_values : 1d array_like
             The attribute values.
         """
-        setattr(self, attribute_name, self.Data(attribute_height, attribute_values))
+        setattr(self, attribute_name,
+                self.Data(attribute_height, attribute_values))
 
         # keep track of the attribute
         data_attributes = self.data_attributes
@@ -642,7 +694,7 @@ class Section:
             self.n_values = n_values
 
             # keep track of attributes
-            self.height_attributes = ['height','values']
+            self.height_attributes = ['height', 'values']
             self.generic_attributes = ['n_values']
 
         def add_height_attribute(self, attribute_name, attribute_values):
@@ -693,7 +745,7 @@ class Section:
                 Pandas DataFrame with all attributes associated with
                 this Data object,
             """
-            df = pd.DataFrame({'height':self.height})
+            df = pd.DataFrame({'height': self.height})
 
             for attribute in self.height_attributes:
                 df[attribute] = getattr(self, attribute)
@@ -722,10 +774,11 @@ class Section:
             """
             # make sure the data points are sorted
             if not np.array_equal(np.sort(self.height), self.height):
-                raise Exception('Stratigraphic heights were out of order. '
-                                'Please check that the data were not logged incorrectly, '
-                                'and sort by stratigraphic height before using '
-                                'add_data_attribute().')
+                raise Exception(
+                    'Stratigraphic heights were out of order. '
+                    'Please check that the data were not logged incorrectly, '
+                    'and sort by stratigraphic height before using '
+                    'add_data_attribute().')
 
             # calculate the unit from which the sample came
             facies = []
@@ -777,13 +830,15 @@ class Section:
             """
             # check that add_data_facies has been run
             if 'facies' not in self.height_attributes:
-                raise Exception('Data has not been assigned a facies. '
-                                'Data.add_data_facies() will assign facies and '
-                                'unit numbers automatically.')
+                raise Exception(
+                    'Data has not been assigned a facies. '
+                    'Data.add_data_facies() will assign facies and '
+                    'unit numbers automatically.')
             if 'unit_number' not in self.height_attributes:
-                raise Exception('Data has not been assigned a unit_number. '
-                                'Data.add_data_facies() will assign facies and '
-                                'unit numbers automatically.')
+                raise Exception(
+                    'Data has not been assigned a unit_number. '
+                    'Data.add_data_facies() will assign facies and '
+                    'unit numbers automatically.')
 
             # get the dataframe
             df = self.return_data_dataframe()
@@ -794,19 +849,26 @@ class Section:
 
             # the case where there are no samples on units boundaries
             if len(df_slice.index) == 0:
-                print('No samples are on unit boundaries - no manual edits required.')
+                print(
+                    'No samples are on unit boundaries - no manual edits required.'
+                )
 
             # print the code
             else:
-                print('1) Copy and paste the code below into a cell and edit as follows:')
-                print('- If the sample comes from the lower unit, subtract 0.5.')
+                print(
+                    '1) Copy and paste the code below into a cell and edit as follows:'
+                )
+                print(
+                    '- If the sample comes from the lower unit, subtract 0.5.')
                 print('- If the sample comes from the upper unit, add 0.5.')
                 print('')
                 print('2) Run Data.clean_data_facies().')
                 print('===')
                 for i in df_slice.index:
-                    print(data_name + '.unit_number[' + str(i) + '] = ' + str(df_slice['unit_number'][i]) +
-                          ' #height = ' + str(df_slice['height'][i]) + ', sample = ' + str(df_slice['sample'][i]))
+                    print(data_name + '.unit_number[' + str(i) + '] = ' +
+                          str(df_slice['unit_number'][i]) + ' #height = ' +
+                          str(df_slice['height'][i]) + ', sample = ' +
+                          str(df_slice['sample'][i]))
 
         def clean_data_facies(self, section):
             """
@@ -828,12 +890,16 @@ class Section:
             for i in range(len(self.unit_number)):
                 self.facies[i] = section.facies[self.unit_number[i]]
 
+
 class Style():
     """
     Organizes the plotting style for the lithostratigraphy.
     """
 
-    def __init__(self, labels, color_values, width_values,
+    def __init__(self,
+                 labels,
+                 color_values,
+                 width_values,
                  style_attribute='facies',
                  swatch_values=None):
         """
@@ -878,7 +944,7 @@ class Style():
             color_values = color_values.values
 
         # check that the widths are between 0 and 1
-        if np.max(width_values)>1 or np.min(width_values)<0:
+        if np.max(width_values) > 1 or np.min(width_values) < 0:
             raise Exception('Width values must be floats between 0 and 1.')
 
         # assign the attributes
@@ -922,7 +988,7 @@ class Style():
         color_values = color_values[width_sort_inds]
         width_values = width_values[width_sort_inds]
 
-        if swatch_values != None:
+        if swatch_values[0] != None:
             swatch_values = [swatch_values[x] for x in width_sort_inds]
 
         # initiate ax
@@ -941,24 +1007,33 @@ class Style():
         for i in range(len(labels)):
 
             # create the rectangle - with thickness of 1
-            ax.add_patch(Rectangle((0.0,strat_height), width_values[i],
-                                    1, facecolor=color_values[i], edgecolor='k'))
+            ax.add_patch(
+                Rectangle((0.0, strat_height),
+                          width_values[i],
+                          1,
+                          facecolor=color_values[i],
+                          edgecolor='k'))
 
             # if swatch is defined, plot it
-            if swatch_values != None:
+            if swatch_values[0] != None:
                 if swatch_values[i] != None:
-                    extent = [0, width_values[i], strat_height, strat_height+1]
+                    extent = [
+                        0, width_values[i], strat_height, strat_height + 1
+                    ]
                     plot_swatch(swatch_values[i], extent, ax)
 
             # label the unit
-            ax.text(-0.01, strat_height+0.5, labels[i],
-                    horizontalalignment='right', verticalalignment='center')
+            ax.text(-0.01,
+                    strat_height + 0.5,
+                    labels[i],
+                    horizontalalignment='right',
+                    verticalalignment='center')
 
             # count the stratigraphic height
             strat_height = strat_height + 1
 
         # prettify
-        ax.set_xlim(0,1)
+        ax.set_xlim(0, 1)
         ax.set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1])
         for label in ax.get_xticklabels():
             label.set_rotation(270)
@@ -980,6 +1055,7 @@ class Style():
 #################
 ### FUNCTIONS ###
 #################
+
 
 def attribute_convert_and_check(attribute):
     """
@@ -1008,6 +1084,7 @@ def attribute_convert_and_check(attribute):
         raise Exception('Data must be 1d.')
 
     return attribute
+
 
 def section_style_compatibility(section, style):
     """
@@ -1047,18 +1124,21 @@ def section_style_compatibility(section, style):
         # only print warning if the check fails for the first time
         if color_check == False:
             if color_attribute[i] not in color_failed:
-                print('Color label in Section but not Style: ' + str(color_attribute[i]))
+                print('Color label in Section but not Style: ' +
+                      str(color_attribute[i]))
                 color_failed.append(color_attribute[i])
             all_check = False
         if width_check == False:
             if width_attribute[i] not in width_failed:
-                print('Width label in Section but not Style: ' + str(width_attribute[i]))
+                print('Width label in Section but not Style: ' +
+                      str(width_attribute[i]))
                 width_failed.append(width_attribute[i])
             all_check = False
 
     # print an all clear statement if the check passes
     if all_check:
         print('Section and Style are compatible.')
+
 
 def plot_swatch(swatch_code, extent, ax, swatch_wid=1.5):
     """
@@ -1081,24 +1161,25 @@ def plot_swatch(swatch_code, extent, ax, swatch_wid=1.5):
     mask : [to be implemented]
         masking geometry to apply to tesselated swatch (probably in axis coordinates?)
     """
-    
+
     x0, x1, y0, y1 = extent
 
     # dimensions of extent (data coordinates)
     dx_ex = x1 - x0
     dy_ex = y1 - y0
 
-    if dx_ex==0 or dy_ex==0:
-        warnings.warn('Extent has no width and/or height. Swatch cannot be plotted.')
+    if dx_ex == 0 or dy_ex == 0:
+        warnings.warn(
+            'Extent has no width and/or height. Swatch cannot be plotted.')
         return
 
     # load swatch
     swatch = Image.open(mod_dir + '/swatches/png/%s.png' % swatch_code)
-    
+
     # first get figure size
     fig = ax.get_figure()
     figsize = fig.get_size_inches()
-    
+
     # axis inches per data unit
     ax_x_in = np.diff(fig.transFigure.inverted().transform(ax.transData.transform([(0, 0), (1, 0)])), axis=0)[0][0] * \
                          figsize[0]
@@ -1106,27 +1187,28 @@ def plot_swatch(swatch_code, extent, ax, swatch_wid=1.5):
                          figsize[1]
     dx_ex_in = dx_ex * ax_x_in
     dy_ex_in = dy_ex * ax_y_in
-    
+
     # size of image
     dx_sw, dy_sw = swatch.size  # in pixels
-    asp_sw = dy_sw/dx_sw
+    asp_sw = dy_sw / dx_sw
     dx_sw_in = swatch_wid
-    dy_sw_in = asp_sw*dx_sw_in
-    
+    dy_sw_in = asp_sw * dx_sw_in
+
     # tile image to overlap with extent
     sw_np = np.array(swatch)
-    ny_tile = np.ceil(dy_ex_in/dy_sw_in).astype(int)
-    nx_tile = np.ceil(dx_ex_in/dx_sw_in).astype(int)
+    ny_tile = np.ceil(dy_ex_in / dy_sw_in).astype(int)
+    nx_tile = np.ceil(dx_ex_in / dx_sw_in).astype(int)
     sw_tess = np.tile(sw_np, [ny_tile, nx_tile, 1])
-    
+
     # now crop tessalated image to fit
-    x_idx_crop = int(dx_ex_in/dx_sw_in/nx_tile*sw_tess.shape[1])
-    y_idx_crop = int(dy_ex_in/dy_sw_in/ny_tile*sw_tess.shape[0])
+    x_idx_crop = int(dx_ex_in / dx_sw_in / nx_tile * sw_tess.shape[1])
+    y_idx_crop = int(dy_ex_in / dy_sw_in / ny_tile * sw_tess.shape[0])
     sw_tess = sw_tess[0:y_idx_crop, 0:x_idx_crop, :]
 
-    if sw_tess.shape[0]==0 or sw_tess.shape[1]==0:
-        warnings.warn('Extent has no width and/or height. Swatch cannot be plotted.')
+    if sw_tess.shape[0] == 0 or sw_tess.shape[1] == 0:
+        warnings.warn(
+            'Extent has no width and/or height. Swatch cannot be plotted.')
         return
-    
+
     ax.imshow(sw_tess, extent=extent, zorder=2, aspect='auto')
     ax.autoscale(False)
