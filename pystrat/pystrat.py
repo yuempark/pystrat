@@ -364,8 +364,8 @@ class Section:
         facies = attribute_convert_and_check(facies)
 
         # check that the thicknesses are numeric
-        if thicknesses.dtype == np.object:
-            raise Exception('Thickness data must be floats or ints.')
+        # if thicknesses.dtype == np.object:
+        #     raise Exception('Thickness data must be floats or ints.')
 
         # check for NaNs, and get rid of them
         thicknesses_nan_mask = np.isnan(thicknesses)
@@ -490,17 +490,18 @@ class Section:
                           linewidth=linewidth))
 
             # if swatch is defined, plot it
-            if style.swatch_values[0] != None:
-                for j in range(style.n_labels):
-                    if style_attribute[i] == style.labels[j]:
-                        this_swatch = style.swatch_values[j]
-                        if this_swatch == None:
-                            continue
-                        extent = [
-                            0, this_width, strat_height,
-                            strat_height + this_thickness
-                        ]
-                        plot_swatch(this_swatch, extent, ax)
+            # if style.swatch_values[0] != None:
+            ax.autoscale(False)
+            for j in range(style.n_labels):
+                if style_attribute[i] == style.labels[j]:
+                    this_swatch = style.swatch_values[j]
+                    if this_swatch == 0:
+                        continue
+                    extent = [
+                        0, this_width, strat_height,
+                        strat_height + this_thickness
+                    ]
+                    plot_swatch(this_swatch, extent, ax)
 
             # count the stratigraphic height
             strat_height = strat_height + this_thickness
@@ -928,7 +929,8 @@ class Style():
             Values must be between 0 and 1.
 
         swatch_values : 1d array_like
-            USGS swatch codes (see swatches/png/) for labels
+            USGS swatch codes (see swatches/png/) for labels.
+            Give zero for no swatch.
 
         """
         # convert to arrays and check the dimensionality
@@ -988,6 +990,7 @@ class Style():
         color_values = color_values[width_sort_inds]
         width_values = width_values[width_sort_inds]
 
+        # what does this do??
         if swatch_values[0] != None:
             swatch_values = [swatch_values[x] for x in width_sort_inds]
 
@@ -1015,12 +1018,12 @@ class Style():
                           edgecolor='k'))
 
             # if swatch is defined, plot it
-            if swatch_values[0] != None:
-                if swatch_values[i] != None:
-                    extent = [
-                        0, width_values[i], strat_height, strat_height + 1
-                    ]
-                    plot_swatch(swatch_values[i], extent, ax)
+            # if swatch_values[0] != None:
+            if swatch_values[i] != 0:
+                extent = [
+                    0, width_values[i], strat_height, strat_height + 1
+                ]
+                plot_swatch(swatch_values[i], extent, ax)
 
             # label the unit
             ax.text(-0.01,
@@ -1211,4 +1214,5 @@ def plot_swatch(swatch_code, extent, ax, swatch_wid=1.5):
         return
 
     ax.imshow(sw_tess, extent=extent, zorder=2, aspect='auto')
+    # ax.imshow(sw_tess, extent=extent, zorder=2)
     ax.autoscale(False)
