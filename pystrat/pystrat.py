@@ -32,6 +32,7 @@ import matplotlib.patches as patches
 from matplotlib.patches import ConnectionPatch
 from mpl_toolkits.axes_grid1 import Divider, Size
 from PIL import Image
+import cvxpy as cp
 
 ##
 ## Global vars
@@ -346,7 +347,7 @@ class Section:
     Organizes all data associated with a single stratigraphic section.
     """
 
-    def __init__(self, thicknesses, facies, name=None):
+    def __init__(self, thicknesses, facies, name=None, annotations=None):
         """
         Initialize Section with the two primary attributes.
 
@@ -358,10 +359,20 @@ class Section:
 
         facies : 1d array_like
             Observed facies. Any NaNs will be automatically removed.
+
+        name : str
+            Name of the section
+
+        annotations : 1d array_like
+            Same length as facies. Names of annotations to plot alongside corresponding units
+            in the column. Can be None (in which case nothing will be plotted). Otherwise, 
+            comma separated list of the annotatoins to plot. Must match the names of png files
+            in the annotations folder.
         """
         # convert to arrays and check the dimensionality
         thicknesses = attribute_convert_and_check(thicknesses)
         facies = attribute_convert_and_check(facies)
+        annotations = attribute_convert_and_check(annotations)
 
         # check that the thicknesses are numeric
         # if thicknesses.dtype == np.object:
@@ -396,6 +407,7 @@ class Section:
         # assign the core data to attributes
         self.thicknesses = thicknesses
         self.facies = facies
+        self.annotations = annotations
 
         # add some other facies attributes
         self.top_height = np.cumsum(thicknesses)
@@ -438,7 +450,7 @@ class Section:
             data_attribute.height = data_attribute.height + shift
             setattr(self, attribute, data_attribute)
 
-    def plot(self, style, ax=None, linewidth=1):
+    def plot(self, style, ax=None, linewidth=1, annotation_height=0.25):
         """
         Plot this section using a Style object.
 
@@ -453,6 +465,9 @@ class Section:
 
         linewidth : float
             The linewidth when drawing the stratigraphic section.
+
+        annotation_height : float
+            The height in inches for annotation graphics
         """
         # get the attributes - implicitly checks if the attributes exist
         style_attribute = getattr(self, style.style_attribute)
@@ -501,10 +516,39 @@ class Section:
                         0, this_width, strat_height,
                         strat_height + this_thickness
                     ]
-                    plot_swatch(this_swatch, extent, ax)
+                    plot_swatch(this_swatch, extent, ax)             
 
             # count the stratigraphic height
             strat_height = strat_height + this_thickness
+
+        # plot annotations
+        if self.annotations is not None:
+            # preprocess annotation heights to determine and correct for overlap of symbols
+            # get bounding vertical coordinates for all annotations
+            idx = self.annotations != None
+            
+            # get height in data coordinates
+            height = annotation_height/get_inch_per_dat(ax)[1]
+            width = height/0.5*get_axis_aspect(ax)
+            # these are the bottom coordinates for each annotation
+            bot_coords = self.base_height[idx] + self.thicknesses[idx]/2 - height/2
+            # these are the top coordinates
+            top_coords = bot_coords + height
+
+            # correct for any overlap, output still in data coordinates
+            bot_coords, top_coords = solve_overlap(bot_coords, top_coords)
+
+            # get the annotations
+            annotations = self.annotations[idx]
+            n_annotations = len(annotations)
+
+            # iterate over the annotations
+            for ii in range(n_annotations):
+                for jj, annotation in enumerate(annotations[ii].split(',')):
+                    # remember to adjust starting position for the number of annotations
+                    pos = [jj*width + 1.1, bot_coords[ii]]
+                    plot_annotation(style.annotations[annotation], pos, height, ax)
+
 
         # prettify
         ax.set_xlim(0, 1)
@@ -902,7 +946,8 @@ class Style():
                  color_values,
                  width_values,
                  style_attribute='facies',
-                 swatch_values=None):
+                 swatch_values=None,
+                 annotations=None):
         """
         Initialize Style
 
@@ -932,6 +977,10 @@ class Style():
             USGS swatch codes (see swatches/png/) for labels.
             Give zero for no swatch.
 
+        annotations : dict or None
+            Dictionary linking annotation names to png file paths for plotting
+            annotations.
+
         """
         # convert to arrays and check the dimensionality
         labels = attribute_convert_and_check(labels)
@@ -955,6 +1004,7 @@ class Style():
         self.color_values = color_values
         self.width_values = width_values
         self.swatch_values = swatch_values
+        self.annotations = annotations
 
         # add some other useful attributes
         self.n_labels = len(labels)
@@ -1035,6 +1085,21 @@ class Style():
             # count the stratigraphic height
             strat_height = strat_height + 1
 
+        # plot annotations 
+        if self.annotations is not None:
+            n_annotations = len(self.annotations)
+
+            # plot each one beside the column
+            for ii in range(n_annotations):
+                height = 0.6
+                pos = [1.1, ii+0.5-height/2]
+
+                # for text, assume min aspect ratio of image of 0.5
+                width = height/0.5*get_axis_aspect(ax)
+                ax.text(1.1+width, ii+0.5, list(self.annotations)[ii], va='center')
+                plot_annotation(list(self.annotations.values())[ii], pos, height, ax)
+
+
         # prettify
         ax.set_xlim(0, 1)
         ax.set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1])
@@ -1054,10 +1119,6 @@ class Style():
         for obj in ax.findobj():
             obj.set_clip_on(False)
 
-
-#################
-### FUNCTIONS ###
-#################
 
 
 def attribute_convert_and_check(attribute):
@@ -1180,14 +1241,17 @@ def plot_swatch(swatch_code, extent, ax, swatch_wid=1.5):
     swatch = Image.open(mod_dir + '/swatches/png/%s.png' % swatch_code)
 
     # first get figure size
-    fig = ax.get_figure()
-    figsize = fig.get_size_inches()
+    # fig = ax.get_figure()
+    # figsize = fig.get_size_inches()
 
-    # axis inches per data unit
-    ax_x_in = np.diff(fig.transFigure.inverted().transform(ax.transData.transform([(0, 0), (1, 0)])), axis=0)[0][0] * \
-                         figsize[0]
-    ax_y_in = np.diff(fig.transFigure.inverted().transform(ax.transData.transform([(0, 0), (0, 1)])), axis=0)[0][1] * \
-                         figsize[1]
+    # # axis inches per data unit
+    # ax_x_in = np.diff(fig.transFigure.inverted().transform(ax.transData.transform([(0, 0), (1, 0)])), axis=0)[0][0] * \
+    #                      figsize[0]
+    # ax_y_in = np.diff(fig.transFigure.inverted().transform(ax.transData.transform([(0, 0), (0, 1)])), axis=0)[0][1] * \
+    #                      figsize[1]
+    
+    ax_x_in, ax_y_in = get_inch_per_dat(ax)
+
     dx_ex_in = dx_ex * ax_x_in
     dy_ex_in = dy_ex * ax_y_in
 
@@ -1216,3 +1280,99 @@ def plot_swatch(swatch_code, extent, ax, swatch_wid=1.5):
     ax.imshow(sw_tess, extent=extent, zorder=2, aspect='auto')
     # ax.imshow(sw_tess, extent=extent, zorder=2)
     ax.autoscale(False)
+
+
+def plot_annotation(annotation_path, pos, height, ax,):
+    """
+    plot a png of 
+
+    Parameters
+    ----------  
+    annotation_path : str
+        Path to the file of the annotation
+
+    pos : 1d array_like
+        left and bottom of the annotation plotting, data units [x0, y0]
+
+    height : numeric
+        vertical thickness to plot (vertical extent will be y0 to y0 + height)
+
+    ax : matplotlib axis
+        axis in which to plot
+
+    """
+
+    # load annotation
+    annotation = Image.open(annotation_path)
+    ann_arr = np.array(annotation)
+    
+    # axis inches per data unit
+    aspect_axis = get_axis_aspect(ax)
+
+    # size of image
+    dx, dy= annotation.size  # in pixels
+    aspect_ann = dy / dx
+    width = height/aspect_ann*aspect_axis
+
+    extent = [pos[0], pos[0]+width, pos[1], pos[1]+height]
+
+    ax.imshow(ann_arr, extent=extent, zorder=2, aspect='auto')
+    ax.autoscale(False)
+
+
+def get_inch_per_dat(ax):
+    """Returns the inches per data unit of the given axis 
+    (x, y)
+
+    :param ax: axis handle
+    :type ax: axis handle
+    """
+    fig = ax.get_figure()
+    figsize = fig.get_size_inches()
+
+    x_inch_per_dat = np.diff(fig.transFigure.inverted().transform(ax.transData.transform([(0, 0), (1, 0)])), axis=0)[0][0] * \
+                         figsize[0]
+    y_inch_per_dat = np.diff(fig.transFigure.inverted().transform(ax.transData.transform([(0, 0), (0, 1)])), axis=0)[0][1] * \
+                         figsize[1]
+    return x_inch_per_dat, y_inch_per_dat
+
+
+def get_axis_aspect(ax):
+    """Returns the aspect ratio of the axis in terms of inches per data unit for each axis
+
+    :param ax: axis
+    :type ax: axis handle
+    """
+    x_inch_per_dat, y_inch_per_dat = get_inch_per_dat(ax)
+    return y_inch_per_dat/x_inch_per_dat
+
+
+def solve_overlap(bot_coords, top_coords):
+    """Returns coordinates that have solved for overlap between things that shouldn't be overlapping.
+    assume that the coordinates are already appropriately ordered.
+
+    :param bot_coords: bottom coordinates for objects
+    :type bot_coords: 1d array like
+    :param top_coords: top coordinates for objects
+    :type top_coords: 1d array like
+    """
+    n = len(bot_coords)
+
+    G = np.zeros([n-1, n])
+    h = np.zeros(n-1)
+    for ii in range(n-1):
+        G[ii, ii] = 1
+        G[ii, ii+1] = -1
+        h[ii] = bot_coords[ii+1] - top_coords[ii]
+    
+    x = cp.Variable(n)
+    prob = cp.Problem(cp.Minimize(0.5*cp.quad_form(x, np.identity(n))),
+                    [G @ x <= h])
+    prob.solve(verbose=False)
+
+    delta = x.value
+
+    bot_coords_free = bot_coords + delta
+    top_coords_free = top_coords + delta
+
+    return bot_coords_free, top_coords_free
