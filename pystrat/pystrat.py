@@ -535,12 +535,13 @@ class Section:
             # these are the top coordinates
             top_coords = bot_coords + height
 
-            # correct for any overlap, output still in data coordinates
-            bot_coords, top_coords = solve_overlap(bot_coords, top_coords)
-
             # get the annotations
             annotations = self.annotations[idx]
             n_annotations = len(annotations)
+
+            # correct for any overlap, output still in data coordinates
+            if n_annotations > 1:
+                bot_coords, top_coords = solve_overlap(bot_coords, top_coords)
 
             # iterate over the annotations
             for ii in range(n_annotations):
