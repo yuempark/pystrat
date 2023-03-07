@@ -372,7 +372,8 @@ class Section:
         # convert to arrays and check the dimensionality
         thicknesses = attribute_convert_and_check(thicknesses)
         facies = attribute_convert_and_check(facies)
-        annotations = attribute_convert_and_check(annotations)
+        if annotations is not None:
+            annotations = attribute_convert_and_check(annotations)
 
         # check that the thicknesses are numeric
         # if thicknesses.dtype == np.object:
