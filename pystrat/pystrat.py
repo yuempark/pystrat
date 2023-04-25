@@ -140,6 +140,7 @@ class Fence:
              plot_distances=[],
              distance_labels=False,
              plot_correlations=False,
+             data_attributes=None,
              **kwargs):
         """
         Plot a fence diagram
@@ -166,6 +167,9 @@ class Fence:
             1 means that the right limit of the section will be adjacent to the left
             limit of the subsequent section.
 
+            Will automatically be divided by the maximum number of data attributes to be
+            plotted.
+
         distance_spacing : boolean
             whether or not to scale the distances between sections according to the
             distances between self.coordinates, or plot_distances, if set
@@ -181,7 +185,24 @@ class Fence:
 
         plot_correlations : boolean
             whether or not to plot correlated horizons
+
+        data_attributes : 1d array like (defaults to None)
+            list of data attributes to plot. if the attribute is not defined for a 
+            particular section, it is not plotted.
         """
+        # before setting anything up, need to know if we're plotting data attributes and
+        # how many
+        if data_attributes is not None:
+            # number of attributes to plot per section
+            n_att_sec = np.zeros(self.n_sections).astype(int)
+            for ii in range(self.n_sections):
+                for attribute in data_attributes:
+                    if hasattr(self.sections[ii], attribute):
+                        n_att_sec[ii] = n_att_sec[ii] + 1
+            assert np.sum(n_att_sec) > 0, 'data attribute not found in any sections'
+            # update sec_width to reflect the number of data attributes being plotted
+            sec_wid = sec_wid/np.max(n_att_sec+1)
+
         # set up axes to plot sections into (will share vertical coordinates)
         if fig == None:
             fig_provided = False
@@ -231,7 +252,26 @@ class Fence:
             for ii in range(self.n_sections):
                 axes.append(
                     plt.axes([ax_left_coords[ii], 0, x * sec_wid, 1],
-                             xlim=[0, 1]))
+                             xlim=[0, 1], zorder=10))
+            
+            # if plotting data attributes, make those axes (list of lists)
+            if data_attributes is not None:
+                axes_dat = []
+                for ii in range(self.n_sections):
+                    # dont make an axis if the section doesn't have any data attributes
+                    if n_att_sec[ii] == 0:
+                        axes_dat.append(None)
+                        continue
+                    else:
+                        cur_sec_dat_axes = []
+                    for jj in range(len(data_attributes)):
+                        if hasattr(self.sections[ii], data_attributes[jj]):
+                            cur_sec_dat_axes.append(
+                                plt.axes([ax_left_coords[ii] + (jj+1) * x * sec_wid, 0,
+                                          x * sec_wid, 1], zorder=1))
+                        else:
+                            cur_sec_dat_axes.append(None)
+                    axes_dat.append(cur_sec_dat_axes)
 
         # if user wants uniform spacing between sections in fence diagram
         else:
@@ -256,9 +296,25 @@ class Fence:
             axes[ii].set_xlim([0, 1])
             axes[ii].set_ylim([min_height, max_height])
 
+        # also enforce axis limits for data attributes
+        if data_attributes is not None:
+            for ii in range(self.n_sections):
+                for jj, attribute in enumerate(data_attributes):
+                    if hasattr(self.sections[ii], attribute):
+                        axes_dat[ii][jj].set_ylim([min_height, max_height])
+
         # then plot sections
         for ii, section in enumerate(self.sections):
             section.plot(style, ax=axes[ii])
+
+        # the plot data attributes, if specified
+        if data_attributes is not None:
+            for ii in range(self.n_sections):
+                for jj, attribute in enumerate(data_attributes):
+                    if hasattr(self.sections[ii], attribute):
+                        cur_att = getattr(self.sections[ii], attribute)
+                        axes_dat[ii][jj].plot(cur_att.values, cur_att.height, '.')
+                        axes_dat[ii][jj].set_xlabel(attribute)
 
         # plot and format legend
         if legend:
@@ -281,6 +337,14 @@ class Fence:
             axes[ii].get_xaxis().set_visible(False)
             axes[ii].spines['bottom'].set_visible(False)
 
+        # clean up data attribute axes if defined
+        if data_attributes is not None:
+            for ii in range(self.n_sections):
+                for jj, attribute in enumerate(data_attributes):
+                    if hasattr(self.sections[ii], attribute):
+                        axes_dat[ii][jj].get_yaxis().set_visible(False)
+                        axes_dat[ii][jj].spines['left'].set_visible(False)
+
         # plot correlated beds as connections
         if plot_correlations:
             for ii in range(self.correlations.shape[1]):
@@ -292,7 +356,7 @@ class Fence:
                     con = ConnectionPatch(xyA=xyA,
                                           coordsA=axes[jj].transData,
                                           xyB=xyB,
-                                          coordsB=axes[jj + 1].transData)
+                                          coordsB=axes[jj + 1].transData, zorder=15)
                     fig.add_artist(con)
 
         # plot datum
@@ -508,16 +572,17 @@ class Section:
             # if swatch is defined, plot it
             # if style.swatch_values[0] != None:
             ax.autoscale(False)
-            for j in range(style.n_labels):
-                if style_attribute[i] == style.labels[j]:
-                    this_swatch = style.swatch_values[j]
-                    if this_swatch == 0:
-                        continue
-                    extent = [
-                        0, this_width, strat_height,
-                        strat_height + this_thickness
-                    ]
-                    plot_swatch(this_swatch, extent, ax)             
+            if style.swatch_values is not None:
+                for j in range(style.n_labels):
+                    if style_attribute[i] == style.labels[j]:
+                        this_swatch = style.swatch_values[j]
+                        if this_swatch == 0:
+                            continue
+                        extent = [
+                            0, this_width, strat_height,
+                            strat_height + this_thickness
+                        ]
+                        plot_swatch(this_swatch, extent, ax)             
 
             # count the stratigraphic height
             strat_height = strat_height + this_thickness
@@ -988,7 +1053,8 @@ class Style():
         labels = attribute_convert_and_check(labels)
         width_values = attribute_convert_and_check(width_values)
 
-        swatch_values = np.asarray(swatch_values).ravel().tolist()
+        if swatch_values is not None:
+            swatch_values = np.asarray(swatch_values).ravel().tolist()
 
         # convert from pandas series/dataframes to arrays if necessary
         if type(color_values) == pd.core.series.Series:
@@ -1043,7 +1109,7 @@ class Style():
         width_values = width_values[width_sort_inds]
 
         # what does this do??
-        if swatch_values[0] != None:
+        if swatch_values is not None:
             swatch_values = [swatch_values[x] for x in width_sort_inds]
 
         # initiate ax
@@ -1071,11 +1137,12 @@ class Style():
 
             # if swatch is defined, plot it
             # if swatch_values[0] != None:
-            if swatch_values[i] != 0:
-                extent = [
-                    0, width_values[i], strat_height, strat_height + 1
-                ]
-                plot_swatch(swatch_values[i], extent, ax)
+            if swatch_values is not None:
+                if swatch_values[i] != 0:
+                    extent = [
+                        0, width_values[i], strat_height, strat_height + 1
+                    ]
+                    plot_swatch(swatch_values[i], extent, ax)
 
             # label the unit
             ax.text(-0.01,
