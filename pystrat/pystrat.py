@@ -141,6 +141,7 @@ class Fence:
              distance_labels=False,
              plot_correlations=False,
              data_attributes=None,
+             data_attribute_styles=None,
              **kwargs):
         """
         Plot a fence diagram
@@ -189,6 +190,10 @@ class Fence:
         data_attributes : 1d array like (defaults to None)
             list of data attributes to plot. if the attribute is not defined for a 
             particular section, it is not plotted.
+
+        data_attribute_styles : 1d array like (defaults to None)
+            style dictionary or dictionaries to use to plot data attributes. Either same
+            length as data_attributes, or length of one
         """
         # before setting anything up, need to know if we're plotting data attributes and
         # how many
@@ -202,6 +207,15 @@ class Fence:
             assert np.sum(n_att_sec) > 0, 'data attribute not found in any sections'
             # update sec_width to reflect the number of data attributes being plotted
             sec_wid = sec_wid/np.max(n_att_sec+1)
+
+            # set up a default style if none supplied
+            if data_attribute_styles is None:
+                data_attribute_styles = np.max(n_att_sec) * \
+                                        [{'marker': '.', 
+                                         'color': 'k',
+                                         'linestyle': ''}]
+            elif len(data_attribute_styles) == 1:
+                data_attribute_styles = np.max(n_att_sec) * data_attribute_styles
 
         # set up axes to plot sections into (will share vertical coordinates)
         if fig == None:
@@ -313,7 +327,7 @@ class Fence:
                 for jj, attribute in enumerate(data_attributes):
                     if hasattr(self.sections[ii], attribute):
                         cur_att = getattr(self.sections[ii], attribute)
-                        axes_dat[ii][jj].plot(cur_att.values, cur_att.height, '.')
+                        axes_dat[ii][jj].plot(cur_att.values, cur_att.height, **data_attribute_styles[jj])
                         axes_dat[ii][jj].set_xlabel(attribute)
 
         # plot and format legend
@@ -344,6 +358,7 @@ class Fence:
                     if hasattr(self.sections[ii], attribute):
                         axes_dat[ii][jj].get_yaxis().set_visible(False)
                         axes_dat[ii][jj].spines['left'].set_visible(False)
+                        axes_dat[ii][jj].spines['right'].set_visible(False)
 
         # plot correlated beds as connections
         if plot_correlations:
@@ -403,7 +418,12 @@ class Fence:
                              fontsize=11)
 
         if not fig_provided:
-            return fig
+            if data_attributes is not None:
+                return fig, axes, axes_dat
+            return fig, axes
+        if data_attributes is not None:
+            return axes, axes_dat
+        return axes
 
 
 class Section:
