@@ -142,6 +142,7 @@ class Fence:
              plot_correlations=False,
              data_attributes=None,
              data_attribute_styles=None,
+             section_plot_style={},
              **kwargs):
         """
         Plot a fence diagram
@@ -194,6 +195,9 @@ class Fence:
         data_attribute_styles : 1d array like (defaults to None)
             style dictionary or dictionaries to use to plot data attributes. Either same
             length as data_attributes, or length of one
+        
+        section_plot_styles : dictionary
+            dictionary of style parameters passed to section plotting
         """
         # before setting anything up, need to know if we're plotting data attributes and
         # how many
@@ -319,7 +323,7 @@ class Fence:
 
         # then plot sections
         for ii, section in enumerate(self.sections):
-            section.plot(style, ax=axes[ii])
+            section.plot(style, ax=axes[ii], **section_plot_style)
 
         # the plot data attributes, if specified
         if data_attributes is not None:
@@ -364,8 +368,13 @@ class Fence:
         if plot_correlations:
             for ii in range(self.correlations.shape[1]):
                 for jj in range(self.n_sections - 1):
-                    xyA = [1, self.correlations[jj, ii]]
-                    xyB = [0, self.correlations[jj + 1, ii]]
+                    # need to account for data attribute axes
+                    if data_attributes is not None:
+                        xyA = [1 + np.max(n_att_sec[jj]), self.correlations[jj, ii]]
+                        xyB = [0, self.correlations[jj + 1, ii]]
+                    else:
+                        xyA = [1, self.correlations[jj, ii]]
+                        xyB = [0, self.correlations[jj + 1, ii]]
                     if np.any(np.isnan(xyA)) or np.any(np.isnan(xyB)):
                         continue
                     con = ConnectionPatch(xyA=xyA,
@@ -634,7 +643,9 @@ class Section:
                 for jj, annotation in enumerate(annotations[ii].split(',')):
                     # remember to adjust starting position for the number of annotations
                     pos = [jj*width + 1.1, bot_coords[ii]]
-                    plot_annotation(style.annotations[annotation], pos, height, ax)
+                    # check that annotation is in style
+                    if annotation in list(style.annotations.keys()):
+                        plot_annotation(style.annotations[annotation], pos, height, ax)
 
 
         # prettify
@@ -809,8 +820,8 @@ class Section:
             attribute_values = attribute_convert_and_check(attribute_values)
 
             # check that the heights are numeric
-            if attribute_height.dtype == np.object:
-                raise Exception('Height data must be floats or ints.')
+            # if attribute_height.dtype == np.object:
+            #     raise Exception('Height data must be floats or ints.')
 
             # check that the X and Y have the same length
             n_height = len(attribute_height)
