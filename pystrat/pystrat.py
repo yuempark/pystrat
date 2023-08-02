@@ -330,9 +330,9 @@ class Fence:
             for ii in range(self.n_sections):
                 for jj, attribute in enumerate(data_attributes):
                     if hasattr(self.sections[ii], attribute):
-                        cur_att = getattr(self.sections[ii], attribute)
-                        axes_dat[ii][jj].plot(cur_att.values, cur_att.height, **data_attribute_styles[jj])
-                        axes_dat[ii][jj].set_xlabel(attribute)
+                        self.sections[ii].plot_data_attribute(attribute, 
+                                                              ax=axes_dat[ii][jj],
+                                                              style=data_attribute_styles[jj])
 
         # plot and format legend
         if legend:
@@ -354,15 +354,6 @@ class Fence:
         for ii in range(self.n_sections):
             axes[ii].get_xaxis().set_visible(False)
             axes[ii].spines['bottom'].set_visible(False)
-
-        # clean up data attribute axes if defined
-        if data_attributes is not None:
-            for ii in range(self.n_sections):
-                for jj, attribute in enumerate(data_attributes):
-                    if hasattr(self.sections[ii], attribute):
-                        axes_dat[ii][jj].get_yaxis().set_visible(False)
-                        axes_dat[ii][jj].spines['left'].set_visible(False)
-                        axes_dat[ii][jj].spines['right'].set_visible(False)
 
         # plot correlated beds as connections
         if plot_correlations:
@@ -544,6 +535,26 @@ class Section:
             data_attribute.height = data_attribute.height + shift
             setattr(self, attribute, data_attribute)
 
+    def plot_data_attribute(self, attribute, ax=None, style=None):
+        if ax is None:
+            ax = plt.axes()
+
+        if style is None:
+            style = {'marker': '.', 
+                    'color': 'k',
+                    'linestyle': ''}
+        assert hasattr(self, attribute), 'Section does not have requested attribute.'
+
+        cur_att = getattr(self, attribute)
+        ax.plot(cur_att.values, cur_att.height, **style)
+        ax.set_xlabel(attribute)
+        # clean up axes
+        ax.get_yaxis().set_visible(False)
+        ax.spines['left'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+
+
+
     def plot(self, style, ax=None, linewidth=1, annotation_height=0.25):
         """
         Plot this section using a Style object.
@@ -561,7 +572,9 @@ class Section:
             The linewidth when drawing the stratigraphic section.
 
         annotation_height : float
-            The height in inches for annotation graphics
+            The height in inches for annotation graphics. Set to zero to not plot
+            annotations.
+
         """
         # get the attributes - implicitly checks if the attributes exist
         style_attribute = getattr(self, style.style_attribute)
@@ -617,7 +630,7 @@ class Section:
             strat_height = strat_height + this_thickness
 
         # plot annotations
-        if self.annotations is not None:
+        if (self.annotations is not None) and (annotation_height != 0):
             # preprocess annotation heights to determine and correct for overlap of symbols
             # get bounding vertical coordinates for all annotations
             idx = self.annotations != None
