@@ -431,7 +431,8 @@ class Section:
     Organizes all data associated with a single stratigraphic section.
     """
 
-    def __init__(self, thicknesses, facies, name=None, annotations=None):
+    def __init__(self, thicknesses, facies, 
+                 name=None, annotations=None, units=None):
         """
         Initialize Section with the two primary attributes.
 
@@ -452,6 +453,10 @@ class Section:
             in the column. Can be None (in which case nothing will be plotted). Otherwise, 
             comma separated list of the annotatoins to plot. Must match the names of png files
             in the annotations folder.
+
+        units : array
+            array of unit names. Each unit in the section must have a name.
+            long dimension of the array should be len(thicknesses)
         """
         # convert to arrays and check the dimensionality
         thicknesses = attribute_convert_and_check(thicknesses)
@@ -488,6 +493,18 @@ class Section:
                             'equal. If a warning was raised regarding the '
                             'presence of NaNs in your data, their presence '
                             'may be the cause of this mismatch.')
+        
+        # save units
+        if units is None:
+            self.units = None
+        else:
+            units = np.atleast_2d(units)
+            # make longest dimension into rows
+            if units.shape[0] < units.shape[1]:
+                units = units.T
+            assert units.shape[0] == n_thicknesses_units, \
+                'Unit names need to match number of thicknesses.'
+            self.units = units
 
         # assign the core data to attributes
         self.thicknesses = thicknesses
@@ -555,7 +572,11 @@ class Section:
 
 
 
-    def plot(self, style, ax=None, linewidth=1, annotation_height=0.25):
+    def plot(self, style, 
+             ax=None, 
+             linewidth=1, 
+             annotation_height=0.25,
+             label_units=False):
         """
         Plot this section using a Style object.
 
@@ -575,6 +596,10 @@ class Section:
             The height in inches for annotation graphics. Set to zero to not plot
             annotations.
 
+        label_units : boolean (default: False)
+            Whether or not to label units on the left. If True, then section must
+            have unit names specified.
+
         """
         # get the attributes - implicitly checks if the attributes exist
         style_attribute = getattr(self, style.style_attribute)
@@ -583,6 +608,11 @@ class Section:
         if ax == None:
             ax = plt.axes()
             ax.set_ylim([self.base_height[0], self.top_height[-1]])
+
+        # set up x axis
+        unit_label_wid_tot = 0.2
+        if label_units:
+            ax.set_xlim([-unit_label_wid_tot, 1])
 
         # determine the axis height and limits first
         # ax_height = style.height_scaling_factor * section.total_thickness
@@ -660,9 +690,50 @@ class Section:
                     if annotation in list(style.annotations.keys()):
                         plot_annotation(style.annotations[annotation], pos, height, ax)
 
+        # label units
+        if label_units and (self.units is not None):
+            # number of unit levels
+            n_levels = self.units.shape[1]
+            # width of each hierarchical label set
+            unit_label_wid = unit_label_wid_tot / n_levels
+
+            # loop over each level
+            for ii in range(n_levels):
+                # unique unit names
+                cur_names_unique = np.unique(self.units[:, ii])
+                seq_idxs = []
+                for name in cur_names_unique:
+                    # find sequences of unit names
+                    seq_idxs.append(findseq(self.units, name))
+                seq_idxs = np.concatenate(seq_idxs, axis=0)
+
+                # create boxes and label with unit names
+                for jj, name in enumerate(cur_names_unique):
+                    # box
+                    cur_x = -unit_label_wid_tot + ii * unit_label_wid
+                    cur_y = self.base_height[seq_idxs[jj, 0]]
+                    cur_orig = (cur_x, cur_y)
+                    cur_height = self.top_height[seq_idxs[jj, 1]] - cur_y
+                    cur_rect = Rectangle(cur_orig, unit_label_wid, cur_height,
+                                         edgecolor='k', facecolor=(1, 1, 1, 0))
+                    ax.add_patch(cur_rect)
+                    # label
+                    cur_x_text = cur_x + unit_label_wid/2
+                    cur_y_text = cur_y + cur_height/2
+                    cur_text = ax.text(cur_x_text, cur_y_text, name, 
+                            va='center', ha='center',
+                            rotation='vertical')
+                    # get resulting data coordinates of the plotted label
+                    transf = ax.transData.inverted()
+                    bb = cur_text.get_window_extent()
+                    bb_datacoords = bb.transformed(transf)
+                    # if overstepping the box, give a warning and remove
+                    if (bb_datacoords.y0 < cur_y) | (bb_datacoords.y1 > cur_y + cur_height):
+                        print(f'Unit label {name} too big for box, removing.')
+                        cur_text.remove()
 
         # prettify
-        ax.set_xlim(0, 1)
+        # ax.set_xlim(0, 1)
         ax.set_xticks([0, 0.2, 0.4, 0.6, 0.8, 1])
         for label in ax.get_xticklabels():
             label.set_rotation(270)
@@ -672,7 +743,7 @@ class Section:
         ax.xaxis.grid(ls='--')
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
-        ax.set_ylabel('stratigraphic height [m]')
+        ax.set_ylabel('Height (m)')
 
         # turning the spines off creates some clipping mask issues
         # so just turn the clipping masks off
@@ -1489,3 +1560,64 @@ def solve_overlap(bot_coords, top_coords):
     top_coords_free = top_coords + delta
 
     return bot_coords_free, top_coords_free
+
+
+###
+### HELPER FUNCTIONS
+###
+def findseq(x, val, noteq=False):
+    """
+    Find sequences of a given value within an input vector.
+
+    IN:
+     x: vector of values in which to find sequences
+     val: value to find sequences of in x
+     noteq: (false) whether to find sequences equal or not equal to the supplied
+        value
+
+    OUT:
+     idx: array that contains in rows the number of total sequences of val, with
+       the first column containing the begin indices of each sequence, the second
+       column containing the end indices of sequences, and the third column
+       contains the length of the sequence.
+    """
+    x = x.copy().squeeze()
+    assert len(x.shape) == 1, "x must be vector"
+    # indices of value in x, and
+    # compute differences of x, since subsequent occurences of val in x will
+    # produce zeros after differencing. append nonzero value at end to make
+    # x and difx the same size
+    if noteq:
+        validx = np.atleast_1d(np.argwhere(x != val).squeeze())
+        logidx = x != val
+        x[validx] = val+1
+        difx = np.append(np.diff(logidx),1)
+    else:
+        validx = np.atleast_1d(np.argwhere(x == val).squeeze())
+        logidx = x == val
+        # difx = np.append(np.diff(x),1)
+        difx = np.append(np.diff(logidx),1)
+    nval = len(validx)
+    # if val not in x, warn user
+    if nval == 0:
+        warnings.warn("value val not found in x")
+        return 0
+
+    # now, where validx is one and difx is zero, we know that we have
+    # neighboring values of val in x. Where validx is one and difx is nonzero,
+    # we have end of a sequence
+
+    # now loop over all occurrences of val in x and construct idx
+    c1 = 0
+    idx = np.empty((1,3))
+    while c1 < nval:
+        curidx = np.array([[validx[c1],validx[c1],1]])
+        c2 = 0
+        while difx[validx[c1]+c2] == 0:
+            curidx[0,1] += 1
+            curidx[0,2] += 1
+            c2 += 1
+        idx = np.append(idx,curidx,axis=0)
+        c1 = c1+c2+1
+    idx = idx[1:,:].astype(int)
+    return idx
