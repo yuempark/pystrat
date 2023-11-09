@@ -654,7 +654,8 @@ class Section:
                             0, this_width, strat_height,
                             strat_height + this_thickness
                         ]
-                        plot_swatch(this_swatch, extent, ax)             
+                        plot_swatch(this_swatch, extent, ax,
+                                    swatch_wid=style.swatch_wid)             
 
             # count the stratigraphic height
             strat_height = strat_height + this_thickness
@@ -1129,7 +1130,8 @@ class Style():
                  width_values,
                  style_attribute='facies',
                  swatch_values=None,
-                 annotations=None):
+                 annotations=None,
+                 swatch_wid=1.5):
         """
         Initialize Style
 
@@ -1163,6 +1165,9 @@ class Style():
             Dictionary linking annotation names to png file paths for plotting
             annotations.
 
+        swatch_wid : float (default 1.5)
+            Width of the swatch pattern in inches.
+
         """
         # convert to arrays and check the dimensionality
         labels = attribute_convert_and_check(labels)
@@ -1188,11 +1193,14 @@ class Style():
         self.width_values = width_values
         self.swatch_values = swatch_values
         self.annotations = annotations
+        self.swatch_wid = swatch_wid
 
         # add some other useful attributes
         self.n_labels = len(labels)
 
-    def plot_legend(self, ax=None, legend_unit_height=0.25):
+    def plot_legend(self, 
+                    ax=None, 
+                    legend_unit_height=0.25):
         """
         Plot a legend for this Style object.
 
@@ -1257,7 +1265,8 @@ class Style():
                     extent = [
                         0, width_values[i], strat_height, strat_height + 1
                     ]
-                    plot_swatch(swatch_values[i], extent, ax)
+                    plot_swatch(swatch_values[i], extent, ax,
+                                swatch_wid=self.swatch_wid)
 
             # label the unit
             ax.text(-0.01,
