@@ -1200,7 +1200,8 @@ class Style():
 
     def plot_legend(self, 
                     ax=None, 
-                    legend_unit_height=0.25):
+                    legend_unit_height=0.25,
+                    fontsize=10):
         """
         Plot a legend for this Style object.
 
@@ -1209,6 +1210,12 @@ class Style():
         legend_unit_height : float
             A scaling factor to modify the height of each unit in the
             legend only.
+
+        ax : matplotlib.Axes (default None)
+            Axis to plot into. If None, creates an axis
+
+        fontsize : float (default 10)
+            Fontsize for text in the legend.
 
         Returns
         -------
@@ -1289,7 +1296,9 @@ class Style():
 
                 # for text, assume min aspect ratio of image of 0.5
                 width = height/0.5*get_axis_aspect(ax)
-                ax.text(1.1+width, ii+0.5, list(self.annotations)[ii], va='center')
+                ax.text(1.1+width, ii+0.5, list(self.annotations)[ii], 
+                        va='center',
+                        fontsize=fontsize)
                 plot_annotation(list(self.annotations.values())[ii], pos, height, ax)
 
 
@@ -1305,7 +1314,7 @@ class Style():
         # ax.set_yticklabels([])
         # ax.set_yticks([])
         ax.set_yticks(np.arange(len(labels))+0.5)
-        ax.set_yticklabels(labels)
+        ax.set_yticklabels(labels, fontsize=fontsize)
         ax.tick_params(axis='y', width=0, pad=1)
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
