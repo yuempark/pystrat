@@ -1269,11 +1269,11 @@ class Style():
                                 swatch_wid=self.swatch_wid)
 
             # label the unit
-            ax.text(-0.01,
-                    strat_height + 0.5,
-                    labels[i],
-                    horizontalalignment='right',
-                    verticalalignment='center')
+            # ax.text(-0.01,
+            #         strat_height + 0.5,
+            #         labels[i],
+            #         horizontalalignment='right',
+            #         verticalalignment='center')
 
             # count the stratigraphic height
             strat_height = strat_height + 1
@@ -1302,8 +1302,11 @@ class Style():
             label.set_va('top')
         ax.set_axisbelow(True)
         ax.xaxis.grid(ls='--')
-        ax.set_yticklabels([])
-        ax.set_yticks([])
+        # ax.set_yticklabels([])
+        # ax.set_yticks([])
+        ax.set_yticks(np.arange(len(labels))+0.5)
+        ax.set_yticklabels(labels)
+        ax.tick_params(axis='y', width=0, pad=1)
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
 
