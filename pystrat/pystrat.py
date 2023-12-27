@@ -576,7 +576,8 @@ class Section:
              ax=None, 
              linewidth=1, 
              annotation_height=0.25,
-             label_units=False):
+             label_units=False,
+             unit_fontsize=10):
         """
         Plot this section using a Style object.
 
@@ -599,6 +600,9 @@ class Section:
         label_units : boolean (default: False)
             Whether or not to label units on the left. If True, then section must
             have unit names specified.
+
+        unit_fontsize : float (default: 10)
+            Fontsize for labeling units.
 
         """
         # get the attributes - implicitly checks if the attributes exist
@@ -723,7 +727,7 @@ class Section:
                     cur_y_text = cur_y + cur_height/2
                     cur_text = ax.text(cur_x_text, cur_y_text, name, 
                             va='center', ha='center',
-                            rotation='vertical')
+                            rotation='vertical', fontsize=unit_fontsize)
                     # get resulting data coordinates of the plotted label
                     transf = ax.transData.inverted()
                     bb = cur_text.get_window_extent()
