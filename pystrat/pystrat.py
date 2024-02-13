@@ -1537,6 +1537,10 @@ def get_inch_per_dat(ax):
     :type ax: axis handle
     """
     fig = ax.get_figure()
+    # check for SubFigures
+    while type(fig).__name__ != 'Figure':
+        fig = fig.get_figure()
+
     figsize = fig.get_size_inches()
 
     x_inch_per_dat = np.diff(fig.transFigure.inverted().transform(ax.transData.transform([(0, 0), (1, 0)])), axis=0)[0][0] * \
