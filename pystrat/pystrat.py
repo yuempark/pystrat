@@ -576,7 +576,8 @@ class Section:
              linewidth=1, 
              annotation_height=0.25,
              label_units=False,
-             unit_fontsize=10):
+             unit_label_wid_tot=0.2,
+             unit_fontsize=8):
         """
         Plot this section using a Style object.
 
@@ -600,6 +601,10 @@ class Section:
             Whether or not to label units on the left. If True, then section must
             have unit names specified.
 
+        unit_label_wid_tot : float (default: 0.2)
+            Fractional width of the space to label units (if provided) on the left
+            of the column
+
         unit_fontsize : float (default: 10)
             Fontsize for labeling units.
 
@@ -614,7 +619,6 @@ class Section:
             ax.set_ylim([self.base_height[0], self.top_height[-1]])
 
         # set up x axis
-        unit_label_wid_tot = 0.2
         if label_units:
             ax.set_xlim([-unit_label_wid_tot, 1])
 
@@ -725,9 +729,10 @@ class Section:
                     # label
                     cur_x_text = cur_x + unit_label_wid/2
                     cur_y_text = cur_y + cur_height/2
+                    # print(f'{cur_x_text}, {name}')
                     cur_text = ax.text(cur_x_text, cur_y_text, name, 
-                            va='center', ha='center',
-                            rotation='vertical', fontsize=unit_fontsize)
+                            va='center_baseline', ha='center', rotation_mode='anchor',
+                            rotation=90, fontsize=unit_fontsize)
                     # get resulting data coordinates of the plotted label
                     transf = ax.transData.inverted()
                     bb = cur_text.get_window_extent()
@@ -1372,7 +1377,7 @@ def attribute_convert_and_check(attribute):
     return attribute
 
 
-def plot_swatch(swatch_code, extent, ax, swatch_wid=1.5):
+def plot_swatch(swatch_code, extent, ax, swatch_wid=1.5, warn_size=False):
     """
     plot a tesselated USGS geologic swatch to fit a desired extent
 
@@ -1390,6 +1395,9 @@ def plot_swatch(swatch_code, extent, ax, swatch_wid=1.5):
     swatch_wid : float
         width of original swatch image file in inches
 
+    warn_size : boolean (default: False)
+        Whether or not to issue warnings on swatch sizes.
+
     mask : [to be implemented]
         masking geometry to apply to tesselated swatch (probably in axis coordinates?)
     """
@@ -1401,23 +1409,14 @@ def plot_swatch(swatch_code, extent, ax, swatch_wid=1.5):
     dy_ex = y1 - y0
 
     if dx_ex == 0 or dy_ex == 0:
-        warnings.warn(
-            'Extent has no width and/or height. Swatch cannot be plotted.')
+        if warn_size:
+            warnings.warn(
+                'Extent has no width and/or height. Swatch cannot be plotted.')
         return
 
     # load swatch
     swatch = Image.open(mod_dir + '/swatches/png/%s.png' % swatch_code)
-
-    # first get figure size
-    # fig = ax.get_figure()
-    # figsize = fig.get_size_inches()
-
-    # # axis inches per data unit
-    # ax_x_in = np.diff(fig.transFigure.inverted().transform(ax.transData.transform([(0, 0), (1, 0)])), axis=0)[0][0] * \
-    #                      figsize[0]
-    # ax_y_in = np.diff(fig.transFigure.inverted().transform(ax.transData.transform([(0, 0), (0, 1)])), axis=0)[0][1] * \
-    #                      figsize[1]
-    
+   
     ax_x_in, ax_y_in = get_inch_per_dat(ax)
 
     dx_ex_in = dx_ex * ax_x_in
@@ -1441,8 +1440,9 @@ def plot_swatch(swatch_code, extent, ax, swatch_wid=1.5):
     sw_tess = sw_tess[0:y_idx_crop, 0:x_idx_crop, :]
 
     if sw_tess.shape[0] == 0 or sw_tess.shape[1] == 0:
-        warnings.warn(
-            'Extent has no width and/or height. Swatch cannot be plotted.')
+        if warn_size:
+            warnings.warn(
+                'Extent has no width and/or height. Swatch cannot be plotted.')
         return
 
     ax.imshow(sw_tess, extent=extent, zorder=2, aspect='auto')
