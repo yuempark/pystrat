@@ -709,7 +709,7 @@ class Section:
                 seq_idxs = []
                 for name in cur_names_unique:
                     # find sequences of unit names
-                    seq_idxs.append(findseq(self.units, name))
+                    seq_idxs.append(findseq(self.units[:, ii], name))
                 seq_idxs = np.concatenate(seq_idxs, axis=0)
 
                 # create boxes and label with unit names
