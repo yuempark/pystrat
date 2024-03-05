@@ -450,7 +450,7 @@ class Section:
         annotations : 1d array_like
             Same length as facies. Names of annotations to plot alongside corresponding units
             in the column. Can be None (in which case nothing will be plotted). Otherwise, 
-            comma separated list of the annotatoins to plot. Must match the names of png files
+            comma separated list of the annotations to plot. Must match the names of png files
             in the annotations folder.
 
         units : array
@@ -605,11 +605,8 @@ class Section:
 
         """
         # get the attributes - implicitly checks if the attributes exist
-        style_attribute = getattr(self, style.style_attribute)
-        # assert that all facies in the section are present in style
-        if not np.all(np.in1d(style_attribute, style.labels)):
-            missing_style = style_attribute[~np.in1d(style_attribute, style.labels)]
-            raise ValueError(f'{missing_style} in {self.name} not in style.')
+        if not self.style_compatibility(style):
+            raise ValueError('Style is not compatible with section.')
 
         # initialize
         if ax == None:
@@ -635,7 +632,7 @@ class Section:
 
             # loop over the elements in Style to get the color and width
             for j in range(style.n_labels):
-                if style_attribute[i] == style.labels[j]:
+                if self.facies[i] == style.labels[j]:
                     this_color = style.color_values[j]
                     this_width = style.width_values[j]
 
@@ -653,7 +650,7 @@ class Section:
             ax.autoscale(False)
             if style.swatch_values is not None:
                 for j in range(style.n_labels):
-                    if style_attribute[i] == style.labels[j]:
+                    if self.facies[i] == style.labels[j]:
                         this_swatch = style.swatch_values[j]
                         if this_swatch == 0:
                             continue
@@ -757,6 +754,27 @@ class Section:
         # so just turn the clipping masks off
         for obj in ax.findobj():
             obj.set_clip_on(False)
+
+    def style_compatibility(self, style):
+        """
+        Check that section is compatible with a `Style`. 
+        Returns True if so, False if not
+
+        Parameters
+        ----------
+        section : Section
+            A Section object.
+
+        style : Style
+            A Style object.
+        """
+        # assert that all facies in the section are present in style
+        if not np.all(np.in1d(self.facies, style.labels)):
+            missing_style = self.facies[~np.in1d(self.facies, style.labels)]
+            warnings.warn(f'{missing_style} in {self.name} not in style.')
+            return False
+        else:
+            return True
 
     def add_facies_attribute(self, attribute_name, attribute_values):
         """
@@ -1135,25 +1153,17 @@ class Style():
                  labels,
                  color_values,
                  width_values,
-                 style_attribute='facies',
                  swatch_values=None,
                  annotations=None,
                  swatch_wid=1.5):
         """
         Initialize Style
 
-        Note that compatibility of a Style with a Section is not checked
-        until explicitly called, or plotting is attempted.
-
         Parameters
         ----------
-        style_attribute : string (default 'facies')
-            Section attribute name on which styling is based. When
-            plotting a Section, the Section must have this attribute.
-
         labels : 1d array_like
             The labels to which colors and widths are assigned. When plotting a
-            Section, values within the style_attribute of that Section
+            Section, values within the facies of that Section
             must form a subset of the values within this array_like.
 
         color_values : array_like
@@ -1194,7 +1204,7 @@ class Style():
             raise Exception('Width values must be floats between 0 and 1.')
 
         # assign the attributes
-        self.style_attribute = style_attribute
+        self.style_attribute = 'facies'
         self.labels = labels
         self.color_values = color_values
         self.width_values = width_values
@@ -1360,60 +1370,6 @@ def attribute_convert_and_check(attribute):
         raise Exception('Data must be 1d.')
 
     return attribute
-
-
-def section_style_compatibility(section, style):
-    """
-    Check that a `Section` and `Style` are compatible.
-
-    Parameters
-    ----------
-    section : Section
-        A Section object.
-
-    style : Style
-        A Style object.
-    """
-    # get the attributes - implicitly checks if the attributes exist
-    color_attribute = getattr(section, style.color_attribute)
-    width_attribute = getattr(section, style.width_attribute)
-
-    # store failed labels
-    color_failed = []
-    width_failed = []
-
-    all_check = True
-
-    # loop over values in the Section
-    for i in range(section.n_units):
-        color_check = False
-        width_check = False
-
-        # check to see if the value is in Style
-        for j in range(style.n_color_labels):
-            if color_attribute[i] == style.color_labels[j]:
-                color_check = True
-        for j in range(style.n_width_labels):
-            if width_attribute[i] == style.width_labels[j]:
-                width_check = True
-
-        # only print warning if the check fails for the first time
-        if color_check == False:
-            if color_attribute[i] not in color_failed:
-                print('Color label in Section but not Style: ' +
-                      str(color_attribute[i]))
-                color_failed.append(color_attribute[i])
-            all_check = False
-        if width_check == False:
-            if width_attribute[i] not in width_failed:
-                print('Width label in Section but not Style: ' +
-                      str(width_attribute[i]))
-                width_failed.append(width_attribute[i])
-            all_check = False
-
-    # print an all clear statement if the check passes
-    if all_check:
-        print('Section and Style are compatible.')
 
 
 def plot_swatch(swatch_code, extent, ax, swatch_wid=1.5):
