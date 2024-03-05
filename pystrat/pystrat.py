@@ -271,25 +271,6 @@ class Fence:
                 axes.append(
                     plt.axes([ax_left_coords[ii], 0, x * sec_wid, 1],
                              xlim=[0, 1], zorder=10))
-            
-            # if plotting data attributes, make those axes (list of lists)
-            if data_attributes is not None:
-                axes_dat = []
-                for ii in range(self.n_sections):
-                    # dont make an axis if the section doesn't have any data attributes
-                    if n_att_sec[ii] == 0:
-                        axes_dat.append(None)
-                        continue
-                    else:
-                        cur_sec_dat_axes = []
-                    for jj in range(len(data_attributes)):
-                        if hasattr(self.sections[ii], data_attributes[jj]):
-                            cur_sec_dat_axes.append(
-                                plt.axes([ax_left_coords[ii] + (jj+1) * x * sec_wid, 0,
-                                          x * sec_wid, 1], zorder=1))
-                        else:
-                            cur_sec_dat_axes.append(None)
-                    axes_dat.append(cur_sec_dat_axes)
 
         # if user wants uniform spacing between sections in fence diagram
         else:
@@ -302,6 +283,24 @@ class Fence:
                 axes.append(
                     plt.axes([ax_left_coords[ii], 0, x * sec_wid, 1],
                              xlim=[0, 1]))
+                
+        if data_attributes is not None:
+            axes_dat = []
+            for ii in range(self.n_sections):
+                # dont make an axis if the section doesn't have any data attributes
+                if n_att_sec[ii] == 0:
+                    axes_dat.append(None)
+                    continue
+                else:
+                    cur_sec_dat_axes = []
+                for jj in range(len(data_attributes)):
+                    if hasattr(self.sections[ii], data_attributes[jj]):
+                        cur_sec_dat_axes.append(
+                            plt.axes([ax_left_coords[ii] + (jj+1) * x * sec_wid, 0,
+                                        x * sec_wid, 1], zorder=1))
+                    else:
+                        cur_sec_dat_axes.append(None)
+                axes_dat.append(cur_sec_dat_axes)
 
         if legend:
             leg_left_coord = 1 - delta
@@ -607,6 +606,10 @@ class Section:
         """
         # get the attributes - implicitly checks if the attributes exist
         style_attribute = getattr(self, style.style_attribute)
+        # assert that all facies in the section are present in style
+        if not np.all(np.in1d(style_attribute, style.labels)):
+            missing_style = style_attribute[~np.in1d(style_attribute, style.labels)]
+            raise ValueError(f'{missing_style} in {self.name} not in style.')
 
         # initialize
         if ax == None:
