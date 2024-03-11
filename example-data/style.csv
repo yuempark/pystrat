@@ -1,0 +1,13 @@
+﻿facies,R,G,B,width,swatch
+cover,255,255,255,0.2,0
+grainstone,248,169,85,0.8,627
+intraclast breccia,200,100,255,1,605
+marl,119,136,187,0.4,623
+marl-ribbonite,119,136,187,0.4,623
+recrystallized,255,222,189,0.8,627
+recrystallized-siltstone,119,136,187,0.5,627
+ribbonite,56,134,198,0.5,637
+ribbonite-grainstone,56,134,198,0.5,637
+ribbonite-siltstone,119,136,187,0.5,637
+siltstone-fine sandstone,139,139,139,0.4,627
+stromatolite,13,175,75,0.8,627

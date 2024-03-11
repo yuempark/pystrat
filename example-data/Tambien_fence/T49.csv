@@ -1,0 +1,15 @@
+THICKNESS,LITHOLOGY,GRAIN_SIZE,FEATURES
+6.4,dl,st,
+5.1,dl,gr,
+4.3,cover,cover,
+1.1,si,sts,
+1.6,cover,cover,
+2.1,si,sts,
+0.3,ls,gr,
+1.5,si,sts,
+0.5,ls,gr,bd
+3.2,si,di2,
+0.2,ls,gr,bd
+5,si,di2,
+0.4,ls,gr,bd
+1.1,si,di2,
