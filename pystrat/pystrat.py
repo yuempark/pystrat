@@ -360,11 +360,15 @@ class Fence:
                 for jj in range(self.n_sections - 1):
                     # need to account for data attribute axes
                     if data_attributes is not None:
-                        xyA = [1 + np.max(n_att_sec[jj]), self.correlations[jj, ii]]
-                        xyB = [0, self.correlations[jj + 1, ii]]
+                        # point needs to account for the width of the section axis
+                        # including unit labels
+                        xyA = [np.ptp(axes[jj].get_xlim()) + np.max(n_att_sec[jj]), self.correlations[jj, ii]]
+                        # don't forget about unit labels
+                        xyB = [axes[jj].get_xlim()[0], self.correlations[jj + 1, ii]]
                     else:
-                        xyA = [1, self.correlations[jj, ii]]
-                        xyB = [0, self.correlations[jj + 1, ii]]
+                        xyA = [np.ptp(axes[jj].get_xlim()), self.correlations[jj, ii]]
+                        # xyB = [0, self.correlations[jj + 1, ii]]
+                        xyB = [axes[jj].get_xlim()[0], self.correlations[jj + 1, ii]]
                     if np.any(np.isnan(xyA)) or np.any(np.isnan(xyB)):
                         continue
                     con = ConnectionPatch(xyA=xyA,
