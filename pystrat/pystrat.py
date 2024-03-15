@@ -913,6 +913,25 @@ class Section:
         data_attributes.append(attribute_name)
         setattr(self, 'data_attributes', data_attributes)
 
+    def get_units(self, heights):
+        """Return unit(s) at requested height(s). Units must be defined. If multiple
+        units are defined, all are returned.
+
+        Args:
+            heights (float or arraylike): height(s) at which to query units
+
+        Returns:
+            array: unit(s) at each queried height
+        """
+        assert self.units is not None, 'No units defined.'
+
+        heights = np.atleast_1d(heights)
+        unit_idx = (heights.reshape(-1, 1) < self.top_height) & \
+                   (heights.reshape(-1, 1) > (self.base_height))
+        units = np.tile(self.units, (1, 1, len(heights)))[:, unit_idx.T]
+
+        return np.squeeze(units)
+
     class Data:
         """
         This nested class stores any data tied to the stratigraphic
