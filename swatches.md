@@ -100,34 +100,34 @@ The style.csv file can have a column called `swatch` in which the number assigne
 
 ![Igneous and Metamorphic Rock Lithologic Patterns](images/swatch_ign_meta.png)
 
-**704 Schistose or Gneissoid Granite**
-**705 Schist**
-**706 Contorted Schist**
-**707 Schist and Gneiss**
-**708 Gneiss**
-**709 Contorted Gneiss**
-**710 Soapstone, Talc, or Serpentine**
-**711 Tuffaceous Rock**
-**712 Crystal Tuff**
-**713 Devitrified Tuff**
-**714 Volcanic Breccia and Tuff**
-**715 Volcanic Breccia or Agglomerate**
-**716 Zeolitic Rock**
-**717 Basaltic Flows**
-**718 Granite (1st option)**
-**719 Granite (2nd option)**
-**720 Banded Igneous Rock**
-**721 Igneous Rock (1st option)**
-**722 Igneous Rock (2nd option)**
-**723 Igneous Rock (3rd option)**
-**724 Igneous Rock (4th option)**
-**725 Igneous Rock (5th option)**
-**726 Igneous Rock (6th option)**
-**727 Igneous Rock (7th option)**
-**728 Igneous Rock (8th option)**
-**729 Porphyritic Rock (1st option)**
-**730 Porphyritic Rock (2nd option)**
-**731 Vitrophyre**
-**732 Quartz**
-**733 Ore**
----
+- **704 Schistose or Gneissoid Granite**
+- **705 Schist**
+- **706 Contorted Schist**
+- **707 Schist and Gneiss**
+- **708 Gneiss**
+- **709 Contorted Gneiss**
+- **710 Soapstone, Talc, or Serpentine**
+- **711 Tuffaceous Rock**
+- **712 Crystal Tuff**
+- **713 Devitrified Tuff**
+- **714 Volcanic Breccia and Tuff**
+- **715 Volcanic Breccia or Agglomerate**
+- **716 Zeolitic Rock**
+- **717 Basaltic Flows**
+- **718 Granite (1st option)**
+- **719 Granite (2nd option)**
+- **720 Banded Igneous Rock**
+- **721 Igneous Rock (1st option)**
+- **722 Igneous Rock (2nd option)**
+- **723 Igneous Rock (3rd option)**
+- **724 Igneous Rock (4th option)**
+- **725 Igneous Rock (5th option)**
+- **726 Igneous Rock (6th option)**
+- **727 Igneous Rock (7th option)**
+- **728 Igneous Rock (8th option)**
+- **729 Porphyritic Rock (1st option)**
+- **730 Porphyritic Rock (2nd option)**
+- **731 Vitrophyre**
+- **732 Quartz**
+- **733 Ore**
+
