@@ -733,6 +733,7 @@ class Section:
                     cur_text = ax.text(cur_x_text, cur_y_text, name, 
                             va='center_baseline', ha='center', rotation_mode='anchor',
                             rotation=90, fontsize=unit_fontsize)
+                    plt.gcf().canvas.draw()
                     # get resulting data coordinates of the plotted label
                     transf = ax.transData.inverted()
                     bb = cur_text.get_window_extent()
