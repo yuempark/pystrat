@@ -45,7 +45,7 @@ export PYTHONPATH=$PYTHONPATH:<path/to/directory>/pystrat
 
 ## Usage
 
-A tutorial on how to use the main features of *pystrat* are included in `pystrat-tutorial.ipynb`.
+A tutorial on how to use the main features of *pystrat* are included in [pystrat-tutorial.ipynb](pystrat-tutorial.ipynb). Illustrations of the available swatches that can be implemented using the `style.csv` are provided in [swatches.md](swatches.md).
 
 ## Contributing
 
