@@ -143,6 +143,8 @@ class Fence:
              data_attributes=None,
              data_attribute_styles=None,
              section_plot_style={},
+             sec_names_rotate=True,
+             sec_names_fontsize=10,
              **kwargs):
         """
         Plot a fence diagram
@@ -198,6 +200,13 @@ class Fence:
         
         section_plot_styles : dictionary
             dictionary of style parameters passed to section plotting
+
+        sec_names_rotate : boolean (defaults to True)
+            whether to plot section names vertically or horizontally above columns in
+            fence.
+
+        sec_names_fontsize : float (defaults to 10)
+            fontsize for section names
         """
         # before setting anything up, need to know if we're plotting data attributes and
         # how many
@@ -340,9 +349,10 @@ class Fence:
 
         # then move and scale axes so that vertical coordinate is consistent and datum is at same height in figure
         for ii in range(self.n_sections):
-            # ax.set_xlim([0, 1])
-            # ax.set_ylim([min_height, max_height])
-            axes[ii].set_title(self.sections[ii].name, rotation=90, ha='right')
+            if sec_names_rotate:
+                axes[ii].set_title(self.sections[ii].name, rotation=90, ha='right', fontsize=sec_names_fontsize)
+            else:
+                axes[ii].set_title(self.sections[ii].name, fontsize=sec_names_fontsize)
 
         # clean up plotting sections
         for ii in range(1, self.n_sections):
@@ -927,7 +937,7 @@ class Section:
 
         heights = np.atleast_1d(heights)
         unit_idx = (heights.reshape(-1, 1) < self.top_height) & \
-                   (heights.reshape(-1, 1) > (self.base_height))
+                   (heights.reshape(-1, 1) >= (self.base_height))
         units = np.tile(self.units, (1, 1, len(heights)))[:, unit_idx.T]
 
         return np.squeeze(units)
