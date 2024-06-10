@@ -143,6 +143,8 @@ class Fence:
              data_attributes=None,
              data_attribute_styles=None,
              section_plot_style={},
+             sec_names_rotate=True,
+             sec_names_fontsize=10,
              **kwargs):
         """
         Plot a fence diagram
@@ -198,6 +200,13 @@ class Fence:
         
         section_plot_styles : dictionary
             dictionary of style parameters passed to section plotting
+
+        sec_names_rotate : boolean (defaults to True)
+            whether to plot section names vertically or horizontally above columns in
+            fence.
+
+        sec_names_fontsize : float (defaults to 10)
+            fontsize for section names
         """
         # before setting anything up, need to know if we're plotting data attributes and
         # how many
@@ -340,9 +349,10 @@ class Fence:
 
         # then move and scale axes so that vertical coordinate is consistent and datum is at same height in figure
         for ii in range(self.n_sections):
-            # ax.set_xlim([0, 1])
-            # ax.set_ylim([min_height, max_height])
-            axes[ii].set_title(self.sections[ii].name, rotation=90, ha='right')
+            if sec_names_rotate:
+                axes[ii].set_title(self.sections[ii].name, rotation=90, ha='right', fontsize=sec_names_fontsize)
+            else:
+                axes[ii].set_title(self.sections[ii].name, fontsize=sec_names_fontsize)
 
         # clean up plotting sections
         for ii in range(1, self.n_sections):
@@ -360,11 +370,15 @@ class Fence:
                 for jj in range(self.n_sections - 1):
                     # need to account for data attribute axes
                     if data_attributes is not None:
-                        xyA = [1 + np.max(n_att_sec[jj]), self.correlations[jj, ii]]
-                        xyB = [0, self.correlations[jj + 1, ii]]
+                        # point needs to account for the width of the section axis
+                        # including unit labels
+                        xyA = [np.ptp(axes[jj].get_xlim()) + np.max(n_att_sec[jj]), self.correlations[jj, ii]]
+                        # don't forget about unit labels
+                        xyB = [axes[jj].get_xlim()[0], self.correlations[jj + 1, ii]]
                     else:
-                        xyA = [1, self.correlations[jj, ii]]
-                        xyB = [0, self.correlations[jj + 1, ii]]
+                        xyA = [np.ptp(axes[jj].get_xlim()), self.correlations[jj, ii]]
+                        # xyB = [0, self.correlations[jj + 1, ii]]
+                        xyB = [axes[jj].get_xlim()[0], self.correlations[jj + 1, ii]]
                     if np.any(np.isnan(xyA)) or np.any(np.isnan(xyB)):
                         continue
                     con = ConnectionPatch(xyA=xyA,
@@ -909,6 +923,25 @@ class Section:
         data_attributes = self.data_attributes
         data_attributes.append(attribute_name)
         setattr(self, 'data_attributes', data_attributes)
+
+    def get_units(self, heights):
+        """Return unit(s) at requested height(s). Units must be defined. If multiple
+        units are defined, all are returned.
+
+        Args:
+            heights (float or arraylike): height(s) at which to query units
+
+        Returns:
+            array: unit(s) at each queried height
+        """
+        assert self.units is not None, 'No units defined.'
+
+        heights = np.atleast_1d(heights)
+        unit_idx = (heights.reshape(-1, 1) < self.top_height) & \
+                   (heights.reshape(-1, 1) >= (self.base_height))
+        units = np.tile(self.units, (1, 1, len(heights)))[:, unit_idx.T]
+
+        return np.squeeze(units)
 
     class Data:
         """

@@ -12,7 +12,9 @@
   - Added class method `Section.shift_heights()` to Section to shift stratigraphic heights by a fixed amount (also shifts data attribute heights)
   - Sections can now have names
   - Sections can have (multiple) unit labels in boxes on the left, as is commonly done for labeling of formations, groups, etc.
-  - Sections can have (multiple) annotations within units, which plot alongside unit rectangles
+  - Sections can have (multiple) annotations within units, which plot alongside unit
+    rectangles
+  - `Section.get_units()` returns the units at requested stratigraphic heights
 - `Style`
   - USGS swatches can be defined as an optional component
   - Annotations can be defined as an optional component
