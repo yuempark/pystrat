@@ -1449,7 +1449,7 @@ def plot_swatch(swatch_code, extent, ax, swatch_wid=1.5, warn_size=False):
         return
 
     # load swatch
-    swatch = Image.open(mod_dir + '/swatches/png/%s.png' % swatch_code)
+    swatch = Image.open(mod_dir + '../../../swatches/png/%s.png' % swatch_code)
    
     ax_x_in, ax_y_in = get_inch_per_dat(ax)
 
