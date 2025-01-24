@@ -1,6 +1,9 @@
 # annotations afdesign
 annotations.afdesign
 
+# doc builds
+docs/jupyter_execute
+
 # Temporary and binary files
 *~
 *.py[cod]

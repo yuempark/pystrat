@@ -72,7 +72,17 @@ extensions = [
     "sphinx.ext.ifconfig",
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
-    "myst_parser",
+    "myst_nb",
+]
+
+# myst_nb config
+nb_execution_mode = "off"
+nb_execution_output_dir = "notebook_output"
+myst_enable_extensions = [
+    "amsmath",          # For math environments like align
+    "dollarmath",       # For dollar-based math (e.g., $...$)
+    "colon_fence",      # For admonitions like :::note
+    "html_admonition"
 ]
 
 # Add any paths that contain templates here, relative to this directory.
