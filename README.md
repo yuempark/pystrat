@@ -2,50 +2,27 @@
 
 <img src="https://raw.githubusercontent.com/yuempark/pystrat/master/images/pystrat-logo.png" width="100" height="100">
 
-Convenient stratigraphic plotting and analysis in Python.
+Convenient stratigraphic plotting in Python.
 
 *pystrat* seeks to make the plotting and analysis of stratigraphic data reproducible and simple.
 
 ## Installation
 
-### PyPI
-
 To install the latest release from PyPI, simply enter the following at the command prompt:
 
-```
+```bash
 pip install pystrat
 ```
 
-### GitHub
-
-To install the latest version of the code directly from GitHub:
-
-1. Open Terminal.
-
-2. Change the current working directory to the location where you want the cloned directory to be made.
-
-```
-cd <path/to/directory/>
-```
-
-3. Copy, paste, and execute the following:
-
-```
-git clone https://github.com/yuempark/pystrat.git
-```
-
-4. Set the path by opening `.bash_profile` or `.bashrc` (usually in your root directory) and adding the following:
-
-```
-export PATH=$PATH:<path/to/directory>/pystrat
-export PYTHONPATH=$PYTHONPATH:<path/to/directory>/pystrat
-```
-
-* If you don't want to mess with your `.bash_profile` or `.bashrc`, just make sure that your code is in the same directory as `pystrat-tutorial.ipynb`.
-
 ## Usage
 
-A tutorial on how to use the main features of *pystrat* are included in [tutorial.ipynb](docs/tutorial.ipynb). Illustrations of the available swatches that can be implemented using the `style.csv` are provided in [swatches.md](swatches.md).
+See the [quickstart]() to learn the basics.
+
+Advanced usage for plotting sections and fence diagrams is also covered in the documentation:
+- [sections]()
+- [fence diagrams]()
+
+Illustrations of the available swatches that can be implemented using the `style.csv` are provided in [swatches.md](swatches.md).
 
 ## Contributing
 
