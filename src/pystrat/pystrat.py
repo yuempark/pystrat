@@ -32,7 +32,7 @@ import matplotlib.patches as patches
 from matplotlib.patches import ConnectionPatch
 from mpl_toolkits.axes_grid1 import Divider, Size
 from PIL import Image
-import cvxpy as cp
+# import cvxpy as cp
 
 ##
 ## Global vars
@@ -46,7 +46,7 @@ mod_dir = os.path.dirname(os.path.realpath(__file__))
 
 class Fence:
     """
-    Organizes sections according to a shared datum
+    Organizes sections according to a shared datum.
     """
 
     def __init__(self,
@@ -126,8 +126,8 @@ class Fence:
         for ii in range(self.n_sections):
             self.sections[ii].shift_heights(-self.datums[ii])
             if len(self.correlations) > 0:
-                self.correlations[
-                    ii, :] = self.correlations[ii, :] - self.datums[ii]
+                self.correlations[ii, :] = self.correlations[ii, :] - \
+                                            self.datums[ii]
 
     def plot(self,
              style,
@@ -452,8 +452,7 @@ class Section:
         Parameters
         ----------
         thicknesses : 1d array_like
-            Thicknesses of the facies. Any NaNs will be automatically
-            removed.
+            Thicknesses of the facies. Any NaNs will be automatically removed.
 
         facies : 1d array_like
             Observed facies. Any NaNs will be automatically removed.
@@ -461,11 +460,8 @@ class Section:
         name : str
             Name of the section
 
-        annotations : 1d array_like
-            Same length as facies. Names of annotations to plot alongside corresponding units
-            in the column. Can be None (in which case nothing will be plotted). Otherwise, 
-            comma separated list of the annotations to plot. Must match the names of png files
-            in the annotations folder.
+        annotations : pandas.DataFrame
+            DataFrame with columns 'height' and 'annotation'. Heights correspond to stratigraphic heights at which to plot annotations. Annotations are .png files in the annotations folder.
 
         units : array
             array of unit names. Each unit in the section must have a name.
@@ -475,7 +471,10 @@ class Section:
         thicknesses = attribute_convert_and_check(thicknesses)
         facies = attribute_convert_and_check(facies)
         if annotations is not None:
-            annotations = attribute_convert_and_check(annotations)
+            assert 'height' in annotations.columns, \
+                  'annotations must have a height column'
+            assert 'annotation' in annotations.columns, \
+                'annotations must have an annotation column'
 
         # check that the thicknesses are numeric
         # if thicknesses.dtype == np.object:
@@ -564,6 +563,10 @@ class Section:
             data_attribute = getattr(self, attribute)
             data_attribute.height = data_attribute.height + shift
             setattr(self, attribute, data_attribute)
+        
+        # annotation heights
+        if self.annotations is not None:
+            self.annotations.height = self.annotations.height + shift
 
     def plot_data_attribute(self, attribute, ax=None, style=None):
         if ax is None:
@@ -582,7 +585,6 @@ class Section:
         ax.get_yaxis().set_visible(False)
         ax.spines['left'].set_visible(False)
         ax.spines['right'].set_visible(False)
-
 
 
     def plot(self, style, 
@@ -684,34 +686,36 @@ class Section:
 
         # plot annotations
         if (self.annotations is not None) and (annotation_height != 0):
-            # preprocess annotation heights to determine and correct for overlap of symbols
-            # get bounding vertical coordinates for all annotations
-            idx = self.annotations != None
+            # keep only annotations with symbols in style
+            annotations = []
+            heights = []
+            for ii, annotation in enumerate(self.annotations.annotation):
+                if annotation not in list(style.annotations.keys()):
+                    warnings.warn(f'Annotation {annotation} not in style.')
+                else:
+                    annotations.append(annotation)
+                    heights.append(self.annotations.height.values[ii])
+
+            # preprocess annotation heights to determine overlap of symbols
             
             # get height in data coordinates
             height = annotation_height/get_inch_per_dat(ax)[1]
-            width = height/0.5*get_axis_aspect(ax)
             # these are the bottom coordinates for each annotation
-            bot_coords = self.base_height[idx] + self.thicknesses[idx]/2 - height/2
+            bot_coords = heights - height/2
             # these are the top coordinates
             top_coords = bot_coords + height
 
-            # get the annotations
-            annotations = self.annotations[idx]
-            n_annotations = len(annotations)
-
-            # correct for any overlap, output still in data coordinates
-            if n_annotations > 1:
-                bot_coords, top_coords = solve_overlap(bot_coords, top_coords)
+            # warn user if annotations will overlap (i.e. any top coordinate is between another bottom and top coordinate)
+            for ii, top_coord in enumerate(top_coords):
+                if np.any((top_coord > bot_coords) & (top_coord < top_coords)):
+                    warnings.warn(f'Annotation at height {self.annotations.height.values[ii]} will overlap with another annotation. Consider decreasing annotation_height.')
 
             # iterate over the annotations
-            for ii in range(n_annotations):
-                for jj, annotation in enumerate(annotations[ii].split(',')):
-                    # remember to adjust starting position for the number of annotations
-                    pos = [jj*width + 1.1, bot_coords[ii]]
-                    # check that annotation is in style
-                    if annotation in list(style.annotations.keys()):
-                        plot_annotation(style.annotations[annotation], pos, height, ax)
+            for ii, annotation in enumerate(annotations):
+                # remember to adjust starting position for the number of annotations
+                pos = [1.1, bot_coords[ii]]
+                # check that annotation is in style
+                plot_annotation(style.annotations[annotation], pos, height, ax)
 
         # label units
         if label_units and (self.units is not None):
@@ -1449,7 +1453,7 @@ def plot_swatch(swatch_code, extent, ax, swatch_wid=1.5, warn_size=False):
         return
 
     # load swatch
-    swatch = Image.open(mod_dir + '/swatches/png/%s.png' % swatch_code)
+    swatch = Image.open(mod_dir + '../../../swatches/png/%s.png' % swatch_code)
    
     ax_x_in, ax_y_in = get_inch_per_dat(ax)
 
@@ -1485,8 +1489,7 @@ def plot_swatch(swatch_code, extent, ax, swatch_wid=1.5, warn_size=False):
 
 
 def plot_annotation(annotation_path, pos, height, ax,):
-    """
-    plot a png of 
+    """Plot a png of an annotation.
 
     Parameters
     ----------  
@@ -1526,8 +1529,17 @@ def get_inch_per_dat(ax):
     """Returns the inches per data unit of the given axis 
     (x, y)
 
-    :param ax: axis handle
-    :type ax: axis handle
+    Parameters
+    ----------
+    ax : axis handle
+
+    Returns
+    -------
+    x_inch_per_dat : float
+        inches per data unit in x
+    
+    y_inch_per_dat : float
+        inches per data unit in y
     """
     fig = ax.get_figure()
     # check for SubFigures
@@ -1546,42 +1558,18 @@ def get_inch_per_dat(ax):
 def get_axis_aspect(ax):
     """Returns the aspect ratio of the axis in terms of inches per data unit for each axis
 
-    :param ax: axis
-    :type ax: axis handle
+    Parameters
+    ----------
+    ax : axis handle
+
+    Returns
+    -------
+    aspect : float
+        aspect ratio of the axis
     """
     x_inch_per_dat, y_inch_per_dat = get_inch_per_dat(ax)
     return y_inch_per_dat/x_inch_per_dat
 
-
-def solve_overlap(bot_coords, top_coords):
-    """Returns coordinates that have solved for overlap between things that shouldn't be overlapping.
-    assume that the coordinates are already appropriately ordered.
-
-    :param bot_coords: bottom coordinates for objects
-    :type bot_coords: 1d array like
-    :param top_coords: top coordinates for objects
-    :type top_coords: 1d array like
-    """
-    n = len(bot_coords)
-
-    G = np.zeros([n-1, n])
-    h = np.zeros(n-1)
-    for ii in range(n-1):
-        G[ii, ii] = 1
-        G[ii, ii+1] = -1
-        h[ii] = bot_coords[ii+1] - top_coords[ii]
-    
-    x = cp.Variable(n)
-    prob = cp.Problem(cp.Minimize(0.5*cp.quad_form(x, np.identity(n))),
-                    [G @ x <= h])
-    prob.solve(verbose=False)
-
-    delta = x.value
-
-    bot_coords_free = bot_coords + delta
-    top_coords_free = top_coords + delta
-
-    return bot_coords_free, top_coords_free
 
 
 ###
@@ -1591,17 +1579,20 @@ def findseq(x, val, noteq=False):
     """
     Find sequences of a given value within an input vector.
 
-    IN:
-     x: vector of values in which to find sequences
-     val: value to find sequences of in x
-     noteq: (false) whether to find sequences equal or not equal to the supplied
-        value
-
-    OUT:
-     idx: array that contains in rows the number of total sequences of val, with
-       the first column containing the begin indices of each sequence, the second
-       column containing the end indices of sequences, and the third column
-       contains the length of the sequence.
+    Parameters
+    ----------
+    x : array_like
+        Vector of values in which to find sequences.
+    val : float
+        Value to find sequences of in x.
+    noteq : bool, optional
+        Whether to find sequences equal or not equal to the supplied value.
+        Default is False.
+     
+    Returns
+    -------
+    idx : array
+        Array that contains in rows the number of total sequences of val, with the first column containing the begin indices of each sequence, the second column containing the end indices of sequences, and the third column contains the length of the sequence.
     """
     x = x.copy().squeeze()
     assert len(x.shape) == 1, "x must be vector"
