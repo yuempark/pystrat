@@ -1,6 +1,6 @@
 # Changelog
 
-## unreleased
+## v2.0
 
 ### Added
 - new `Fence` class for combining Sections
@@ -12,8 +12,7 @@
   - Added class method `Section.shift_heights()` to Section to shift stratigraphic heights by a fixed amount (also shifts data attribute heights)
   - Sections can now have names
   - Sections can have (multiple) unit labels in boxes on the left, as is commonly done for labeling of formations, groups, etc.
-  - Sections can have (multiple) annotations within units, which plot alongside unit
-    rectangles
+  - Sections can have annotations plot at specified heights to indicate observations
   - `Section.get_units()` returns the units at requested stratigraphic heights
 - `Style`
   - USGS swatches can be defined as an optional component
@@ -32,10 +31,3 @@ Colors and widths are no longer separate stylistic decisions tied to potentially
 - Plotting a section is now a class method (`plot_stratigraphy()` &rarr; `Section.plot()`)
 - Section plotting no longer starts strictly at 0; instead the base of the section is taken as the first entry of `Section.base_heights` (which may be non-zero if the user has used `Section.shift_heights()`)
 - Plotting the legend for a style is more flexible
-
-
-## To Do
-
-- [ ] annotations need to be plotted at known heights, not as parts of units.
-- [ ] traces between correlative units in `Fence.plot()` should snap to the x-coordinate of the unit on the left
-- [ ] update tutorial to reflect new features and changes

@@ -9,14 +9,23 @@ Contents
 ========
 
 .. toctree::
-   :maxdepth: 2
+    :name: Usage
+    :caption: Usage
+    :maxdepth: 2
 
-   Tutorial <tutorial>
-   License <license>
-   Contributors <contributors>
-   Changelog <changelog>
-   Module Reference <api/modules>
+    Quickstart <quickstart>
+    Sections <sections>
+    Fence Diagrams <fence diagrams>
 
+.. toctree::
+    :name: Package Info
+    :caption: Package Info
+    :maxdepth: 2
+
+    License <license>
+    Contributors <contributors>
+    Changelog <changelog>
+    Module Reference <api/modules>
 
 Indices and tables
 ==================

@@ -1,0 +1,45 @@
+THICKNESS,FACIES,LITHOLOGY,GROUP,FORMATION
+4.9,recrystallized,dolomite,GROUP 1,FM 1
+1.8,ribbonite-siltstone,dolomite,GROUP 1,FM 1
+0.8,ribbonite,dolomite,GROUP 1,FM 1
+0.7,ribbonite-siltstone,dolomite,GROUP 1,FM 1
+1.4,ribbonite,dolomite,GROUP 1,FM 1
+0.6,ribbonite-siltstone,dolomite,GROUP 1,FM 1
+1.2,recrystallized-siltstone,dolomite,GROUP 1,FM 1
+2.8,grainstone,dolomite,GROUP 1,FM 1
+0.8,recrystallized-siltstone,dolomite,GROUP 1,FM 1
+1.4,marl,marl,GROUP 1,FM 1
+26.1,ribbonite-grainstone,dolomite,GROUP 1,FM 2
+0.7,grainstone,dolomite,GROUP 1,FM 2
+1.9,ribbonite,dolomite,GROUP 1,FM 2
+0.3,grainstone,dolomite,GROUP 1,FM 2
+3.1,ribbonite,dolomite,GROUP 1,FM 2
+0.2,grainstone,dolomite,GROUP 1,FM 2
+2.9,ribbonite,dolomite,GROUP 1,FM 2
+2,grainstone,dolomite,GROUP 1,FM 2
+0.4,ribbonite,dolomite,GROUP 1,FM 2
+0.2,grainstone,dolomite,GROUP 1,FM 2
+1.3,ribbonite,dolomite,GROUP 1,FM 2
+0.3,intraclast breccia,dolomite,GROUP 1,FM 2
+2.6,ribbonite,dolomite,GROUP 1,FM 2
+7.5,stromatolite,dolomite,GROUP 1,FM 2
+6.4,grainstone,dolomite,GROUP 1,FM 2
+8.2,cover,cover,GROUP 2,FM 3
+4.3,siltstone-fine sandstone,siliciclastic,GROUP 2,FM 3
+4.2,grainstone,dolomite,GROUP 2,FM 3
+0.4,stromatolite,dolomite,GROUP 2,FM 3
+7.5,siltstone-fine sandstone,siliciclastic,GROUP 2,FM 3
+0.4,grainstone,dolomite,GROUP 2,FM 3
+0.1,ribbonite,dolomite,GROUP 2,FM 3
+0.3,grainstone,dolomite,GROUP 2,FM 3
+0.2,marl,marl,GROUP 2,FM 3
+0.4,ribbonite,dolomite,GROUP 2,FM 3
+0.4,grainstone,dolomite,GROUP 2,FM 4
+0.4,ribbonite,limestone,GROUP 2,FM 4
+0.3,marl,marl,GROUP 2,FM 4
+0.2,ribbonite,limestone,GROUP 2,FM 4
+0.6,marl,marl,GROUP 2,FM 4
+0.2,ribbonite,limestone,GROUP 2,FM 4
+1.4,marl,marl,GROUP 2,FM 4
+7.9,marl-ribbonite,marl,GROUP 2,FM 4
+8.7,ribbonite-grainstone,limestone,GROUP 2,FM 4
