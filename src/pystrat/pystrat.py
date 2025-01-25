@@ -45,42 +45,53 @@ mod_dir = os.path.dirname(os.path.realpath(__file__))
 
 
 class Fence:
-    """
+    """Fence diagram class.
+
     Organizes sections according to a shared datum.
+
+    This class permits plotting of fence diagrams.
+
+    Parameters
+    ----------
+    sections : 1d array_like
+        List of Sections to be put into the fence
+    
+    datums : 1d array_like, optional
+        If not specified, the datum for each section will be the bottom. If specified, 
+        must be list of same length as number of sections with heights in each section for the datum.
+
+    correlations : 2d array_like, optional
+        Each column is a correlated horizon where the rows are the heights of this horizon in each section.
+        will plot as a line between fence posts. Default is no correlations.
+
+    coordinates : 1d array_like, optional
+        1D coordinates of sections, reflecting distance between them. Distances between sections will be used to scale the plotting distances 
+        in the fence diagram.
+
+    Attributes
+    ----------
+    n_sections : int
+        Number of sections in the fence diagram
+
+    sections : 1d array_like
+        List of sections in the fence diagram
+    
+    datums : 1d array_like
+        Datum for each section
+
+    correlations : 2d array_like
+        Correlated horizons
+
+    coordinates : 1d array_like
+        Coordinates of sections
     """
 
     def __init__(self,
                  sections,
                  datums=[],
                  correlations=[],
-                 coordinates=[],
-                 legend=False):
-        """
-        Initialize Section with the two primary attributes.
-
-        Parameters
-        ----------
-        sections : 1d array_like
-            List of Sections to be put into the fence
-        
-        datums : 1d array_like
-            If not specified, the datum for each section will be the bottom. If specified, 
-            must be list of same length as number of sections with heights in each section for the datum.
-
-        correlations : 2d array_like
-            each column is a correlated horizon where the rows are the heights of this horizon in each section.
-            will plot as a line between fence posts.
-
-        coordinates : 1d array_like
-            1D coordinates of sections. distances between sections will be used to scale the plotting distances 
-            in the fence diagram
-
-        legend : boolean
-            Whether or not to plot a legend
-
-        To Do:
-        ------
-        - [ ] finish implementing distances in plotting
+                 coordinates=[]):
+        """Initialize fence.
         """
         self.n_sections = len(sections)
         self.sections = [copy.deepcopy(section) for section in sections]
@@ -440,32 +451,54 @@ class Fence:
 
 
 class Section:
-    """
+    """Stratigraphic section class.
+
     Organizes all data associated with a single stratigraphic section.
+    
+    Parameters
+    ----------
+    thicknesses : 1d array_like
+        Thicknesses of the facies. Any NaNs will be automatically removed.
+
+    facies : 1d array_like
+        Observed facies. Any NaNs will be automatically removed.
+
+    name : str, optional
+        Name of the section. Default is None.
+
+    annotations : pandas.DataFrame, optional
+        DataFrame with columns 'height' and 'annotation'. Heights correspond to stratigraphic heights at which to plot annotations. Annotations are .png files in the annotations folder. Default is None.
+
+    units : numpy.ndarray, optional
+        Array of unit names for labeling intervals such as groups, formations, members, etc. Each bed in the section must have a name. Each column in units corresponds to a level of labeling (e.g. group, formation, member). Long dimension of the array must be len(thicknesses). Default is None.
+    
+    Attributes
+    ----------
+    top_height : 1d array_like
+        Top height of each unit.
+
+    base_height : 1d array_like
+        Base height of each unit.
+
+    unit_number : 1d array_like
+        Number of each unit.
+    
+    n_beds : int
+        Number of beds in the section.
+
+    total_thickness : float
+        Total thickness of the section.
+
+    unique_facies : 1d array_like
+        Unique facies in the section.
+
+    n_unique_facies : int
+        Number of unique facies in the section.
     """
 
     def __init__(self, thicknesses, facies, 
                  name=None, annotations=None, units=None):
-        """
-        Initialize Section with the two primary attributes.
-
-        Parameters
-        ----------
-        thicknesses : 1d array_like
-            Thicknesses of the facies. Any NaNs will be automatically removed.
-
-        facies : 1d array_like
-            Observed facies. Any NaNs will be automatically removed.
-
-        name : str
-            Name of the section
-
-        annotations : pandas.DataFrame
-            DataFrame with columns 'height' and 'annotation'. Heights correspond to stratigraphic heights at which to plot annotations. Annotations are .png files in the annotations folder.
-
-        units : array
-            array of unit names. Each unit in the section must have a name.
-            long dimension of the array should be len(thicknesses)
+        """Initialize Section
         """
         # convert to arrays and check the dimensionality
         thicknesses = attribute_convert_and_check(thicknesses)
@@ -530,7 +563,7 @@ class Section:
 
         # add some generic attributes
         self.name = name
-        self.n_units = n_thicknesses_units
+        self.n_beds = n_thicknesses_units
         self.total_thickness = np.sum(thicknesses)
         self.unique_facies = np.unique(facies)
         self.n_unique_facies = len(np.unique(facies))
@@ -540,7 +573,7 @@ class Section:
             'unit_number', 'thicknesses', 'base_height', 'top_height', 'facies'
         ]
         self.generic_attributes = [
-            'name', 'n_units', 'total_thickness', 'unique_facies',
+            'name', 'n_beds', 'total_thickness', 'unique_facies',
             'n_unique_facies'
         ]
         self.data_attributes = []
@@ -569,6 +602,22 @@ class Section:
             self.annotations.height = self.annotations.height + shift
 
     def plot_data_attribute(self, attribute, ax=None, style=None):
+        """Plot a data attribute
+
+        Parameters
+        ----------
+        attribute : str
+            Name of the data attribute to plot
+        ax : matplotlib.axes._axes.Axes, optional
+            Axis to plot into, by default None. If None, will create a new axis and return it.
+        style : dict, optional
+            Plotting style dictionary compatible with matplotlib.pyplot.plot, by default None. If None, a default style will be used.
+
+        Returns
+        -------
+        ax : matplotlib.axes._axes.Axes
+            Returned if no axis is provided
+        """
         if ax is None:
             ax = plt.axes()
 
@@ -586,11 +635,14 @@ class Section:
         ax.spines['left'].set_visible(False)
         ax.spines['right'].set_visible(False)
 
+        if ax is not None:
+            return ax
+
 
     def plot(self, style, 
              ax=None, 
              linewidth=1, 
-             annotation_height=0.25,
+             annotation_height=0.15,
              label_units=False,
              unit_label_wid_tot=0.2,
              unit_fontsize=8):
@@ -645,7 +697,7 @@ class Section:
         strat_height = self.base_height[0]
 
         # loop over elements of the data
-        for i in range(self.n_units):
+        for i in range(self.n_beds):
 
             # pull out the thickness
             this_thickness = self.thicknesses[i]
@@ -797,6 +849,14 @@ class Section:
             missing_style = self.facies[~np.in1d(self.facies, style.labels)]
             warnings.warn(f'{missing_style} in {self.name} not in style.')
             return False
+        # check that annotations, if present, are in style
+        elif (self.annotations is not None) and (style.annotations is not None):
+            if not np.all(np.in1d(self.annotations.annotation, list(style.annotations.keys()))):
+                missing_ann = self.annotations.annotation[~np.in1d(self.annotations.annotation, list(style.annotations.keys()))].values
+                warnings.warn(f'{missing_ann} not in style.')
+                return False
+            else:
+                return True 
         else:
             return True
 
@@ -833,7 +893,7 @@ class Section:
 
         # check that the length of the attribute data matches the number of units
         n_attribute_units = len(attribute_values)
-        if n_attribute_units != self.n_units:
+        if n_attribute_units != self.n_beds:
             raise Exception('Length of thicknesses and attribute data are not '
                             'equal.')
 
@@ -860,7 +920,7 @@ class Section:
             Pandas DataFrame with all attributes associated with the
             stratigraphic units.
         """
-        df = pd.DataFrame({'unit_number': np.arange(self.n_units)})
+        df = pd.DataFrame({'unit_number': np.arange(self.n_beds)})
 
         for attribute in self.facies_attributes:
             df[attribute] = getattr(self, attribute)
@@ -932,20 +992,30 @@ class Section:
         """Return unit(s) at requested height(s). Units must be defined. If multiple
         units are defined, all are returned.
 
-        Args:
-            heights (float or arraylike): height(s) at which to query units
+        Parameters
+        ----------
+        heights : float or array_like
+            Height(s) at which to query units
 
-        Returns:
-            array: unit(s) at each queried height
+        Returns
+        -------
+        units : array-like
+            Unit(s) at queried height(s)
         """
-        assert self.units is not None, 'No units defined.'
+
+        if self.units is None:
+            warnings.warn('No units defined.')
+            return None
 
         heights = np.atleast_1d(heights)
         unit_idx = (heights.reshape(-1, 1) < self.top_height) & \
                    (heights.reshape(-1, 1) >= (self.base_height))
-        units = np.tile(self.units, (1, 1, len(heights)))[:, unit_idx.T]
 
-        return np.squeeze(units)
+        units = np.tile(self.units, (len(heights), 1, 1))[unit_idx]
+
+        units = np.squeeze(units)
+
+        return units
 
     class Data:
         """
@@ -953,20 +1023,32 @@ class Section:
         height, but not explicitly tied to the stratigraphic units.
 
         A typical example of such data would be chemostratigraphic data.
+
+        Parameters
+        ----------
+        attribute_height : 1d array_like
+            The stratigraphic heights at which the attribute were
+            generated.
+
+        attribute_values : 1d array_like
+            The attribute values.
+
+        Attributes
+        ----------
+        height : 1d array_like
+            The stratigraphic heights at which the attribute were
+            generated.
+        
+        values : 1d array_like
+            The attribute values.
+
+        n_values : int
+            The number of values in the attribute.
         """
 
         def __init__(self, attribute_height, attribute_values):
             """
             Initialize Data with the two primary attributes.
-
-            Parameters
-            ----------
-            attribute_height : 1d array_like
-                The stratigraphic heights at which the attribute were
-                generated.
-
-            attribute_values : 1d array_like
-                The attribute values.
             """
             # convert to arrays and check the dimensionality
             attribute_height = attribute_convert_and_check(attribute_height)
@@ -1188,8 +1270,35 @@ class Section:
 
 
 class Style():
-    """
-    Organizes the plotting style for the lithostratigraphy.
+    """Section plotting style class.
+
+    Organizes the plotting style for the lithostratigraphy, including colors, width, swatches, and annotations.
+
+    Parameters
+    ----------
+    labels : 1d array_like
+        The labels to which colors and widths are assigned. When plotting a
+        Section, values within the facies of that Section
+        must form a subset of the values within this array_like.
+
+    color_values : array_like
+        The colors that will be assigned to the associated labels.
+        Values must be interpretable by matplotlib.
+
+    width_values : 1d array_like of floats
+        The widths that will be assigned to the associated labels.
+        Values must be between 0 and 1.
+
+    swatch_values : 1d array_like
+        USGS swatch codes (see swatches/png/) for labels.
+        Give zero for no swatch.
+
+    annotations : dict or None
+        Dictionary linking annotation names to png file paths for plotting
+        annotations.
+
+    swatch_wid : float (default 1.5)
+        Width of the swatch pattern in inches.
     """
 
     def __init__(self,
@@ -1199,35 +1308,7 @@ class Style():
                  swatch_values=None,
                  annotations=None,
                  swatch_wid=1.5):
-        """
-        Initialize Style
-
-        Parameters
-        ----------
-        labels : 1d array_like
-            The labels to which colors and widths are assigned. When plotting a
-            Section, values within the facies of that Section
-            must form a subset of the values within this array_like.
-
-        color_values : array_like
-            The colors that will be assigned to the associated labels.
-            Values must be interpretable by matplotlib.
-
-        width_values : 1d array_like of floats
-            The widths that will be assigned to the associated labels.
-            Values must be between 0 and 1.
-
-        swatch_values : 1d array_like
-            USGS swatch codes (see swatches/png/) for labels.
-            Give zero for no swatch.
-
-        annotations : dict or None
-            Dictionary linking annotation names to png file paths for plotting
-            annotations.
-
-        swatch_wid : float (default 1.5)
-            Width of the swatch pattern in inches.
-
+        """Initialize Style
         """
         # convert to arrays and check the dimensionality
         labels = attribute_convert_and_check(labels)
