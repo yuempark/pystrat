@@ -88,55 +88,49 @@ class Fence:
 
     def __init__(self,
                  sections,
-                 datums=[],
-                 correlations=[],
-                 coordinates=[]):
+                 datums=None,
+                 correlations=None,
+                 coordinates=None):
         """Initialize fence.
         """
         self.n_sections = len(sections)
         self.sections = [copy.deepcopy(section) for section in sections]
-        datums = np.array(datums)
-        if len(datums) == 0:
+        
+        # if no datums provided, then assume bottom of each section is datum
+        if datums is None:
             datums = np.zeros(self.n_sections)
             for ii in range(self.n_sections):
                 datums[ii] = sections[ii].base_height[0]
         else:
-            assert len(
-                datums
-            ) == self.n_sections, 'Number of datums should equal number of sections'
+            assert len(datums) == self.n_sections, \
+                'Number of datums should equal number of sections'
         self.datums = datums
 
-        correlations = np.array(correlations)
-        if len(correlations) != 0:
-            assert correlations.shape[
-                0] == self.n_sections, 'Number of correlated horizons should match number of sections'
+        if correlations is not None:
+            assert correlations.shape[0] == self.n_sections, \
+                'Number of correlated horizons should match number of sections'
         self.correlations = correlations
 
-        coordinates = np.array(coordinates)
-        if len(coordinates) != 0:
-            assert len(
-                coordinates
-            ) == self.n_sections, 'Number of section distances should match number of sections'
-
-        # if coordinates not provided, assume sections are equally spaced in order provided
-        if len(coordinates) == 0:
+        # if coordinates not provided, then assume sections are equally spaced
+        if coordinates is None:
             self.coordinates = np.cumsum(np.ones(self.n_sections))
         else:
+            assert len(coordinates) == self.n_sections, \
+                'Number of section distances should match number of sections'
             self.coordinates = coordinates
 
         # order sections, correlations, datums by coordinates
-        if len(self.coordinates) > 0:
-            idx = np.argsort(self.coordinates)
-            self.coordinates = self.coordinates[idx]
-            self.sections = [self.sections[x] for x in idx]
-            self.datums = self.datums[idx]
-            if len(self.correlations) > 0:
-                self.correlations = self.correlations[idx]
+        idx = np.argsort(self.coordinates)
+        self.coordinates = self.coordinates[idx]
+        self.sections = [self.sections[x] for x in idx]
+        self.datums = self.datums[idx]
+        if self.correlations is not None:
+            self.correlations = self.correlations[idx]
 
         # apply datums as shift to sections and correlations
         for ii in range(self.n_sections):
             self.sections[ii].shift_heights(-self.datums[ii])
-            if len(self.correlations) > 0:
+            if self.correlations is not None:
                 self.correlations[ii, :] = self.correlations[ii, :] - \
                                             self.datums[ii]
 
@@ -508,6 +502,9 @@ class Section:
                   'annotations must have a height column'
             assert 'annotation' in annotations.columns, \
                 'annotations must have an annotation column'
+            # if DataFrame is empty, set to None
+            if annotations.empty:
+                annotations = None
 
         # check that the thicknesses are numeric
         # if thicknesses.dtype == np.object:
@@ -737,7 +734,8 @@ class Section:
             strat_height = strat_height + this_thickness
 
         # plot annotations
-        if (self.annotations is not None) and (annotation_height != 0):
+        if (self.annotations is not None) and (annotation_height != 0) \
+            and (style.annotations is not None):
             # keep only annotations with symbols in style
             annotations = []
             heights = []
