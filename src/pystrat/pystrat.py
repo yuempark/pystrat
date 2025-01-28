@@ -159,29 +159,23 @@ class Fence:
         style : Style
             A Style object.
 
-        fig : matplotlib.figure.Figure
-            Figure to plot into if desired.
+        fig : matplotlib.figure.Figure, optional
+            Figure to plot into if desired, by default None. If None, will create and return a new figure.
 
-        legend : boolean
-            Whether or not to include a legend for facies
+        legend : boolean, optional
+            Whether or not to include a legend for the pystrat.Style, by default False.
 
-        legend_wid : float [0, 1]
-            Fractional width (figure coordinates) that legend occupies in fence diagram
+        legend_wid : float [0, 1], optional
+            Fractional width (figure coordinates) that legend occupies in fence diagram, by default 0.1.
 
-        legend_hei : float [0, 1]
-            fractional height of legend
+        legend_hei : float [0, 1], optional
+            Fractional height of legend, by default 0.5.
 
-        sec_wid : float (0, 1]
-            width of section as a fraction of the columns containing the sections.
-            1 means that the right limit of the section will be adjacent to the left
-            limit of the subsequent section.
+        sec_wid : float (0, 1], optional
+            Width of section as a fraction of the columns containing the sections, by default 0.8. 1 means that the right limit of the section will be adjacent to the left limit of the subsequent section. Automatically be divided by the maximum number of data attributes to be plotted. Values greater than 1 are permitted but may result in overlap between sections.
 
-            Will automatically be divided by the maximum number of data attributes to be
-            plotted.
-
-        distance_spacing : boolean
-            whether or not to scale the distances between sections according to the
-            distances between self.coordinates, or plot_distances, if set
+        distance_spacing : boolean, optional
+            Whether or not to scale the distances between sections according to the distances between self.coordinates, or plot_distances, if set. Default is False. If False, then sections are equally spaced.
 
         plot_distances : 1d array-like, optional
             Distances between sections to use for plotting. Default is None. If None, then distances are calculated from coordinates. If set, then length (n_sections - 1).
@@ -435,6 +429,7 @@ class Fence:
                              ha='center',
                              fontsize=11)
 
+        # figure out what to return
         if not fig_provided:
             if data_attributes is not None:
                 return fig, axes, axes_dat
@@ -620,6 +615,7 @@ class Section:
 
         if style is None:
             style = {'marker': '.', 
+                     'markersize': 5,
                     'color': 'k',
                     'linestyle': ''}
         assert hasattr(self, attribute), 'Section does not have requested attribute.'
