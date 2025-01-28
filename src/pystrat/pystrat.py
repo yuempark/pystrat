@@ -662,20 +662,17 @@ class Section:
         linewidth : float
             The linewidth when drawing the stratigraphic section.
 
-        annotation_height : float
-            The height in inches for annotation graphics. Set to zero to not plot
-            annotations.
+        annotation_height : float, optional
+            The height in inches for annotation graphics. Defaults to 0.15. Set to zero to not plot annotations.
 
-        label_units : boolean (default: False)
-            Whether or not to label units on the left. If True, then section must
-            have unit names specified.
+        label_units : boolean, optional
+            Whether or not to label units on the left. Default is False. If True, then section must have unit names specified.
 
-        unit_label_wid_tot : float (default: 0.2)
-            Fractional width of the space to label units (if provided) on the left
-            of the column
+        unit_label_wid_tot : float, optional
+            Fractional width of the space to label units (if provided) on the left of the column. Default is 0.2.
 
-        unit_fontsize : float (default: 10)
-            Fontsize for labeling units.
+        unit_fontsize : float, optional
+            Fontsize for labeling units. Default is 8.
 
         """
         # get the attributes - implicitly checks if the attributes exist
@@ -982,6 +979,12 @@ class Section:
         attribute_values : 1d array_like
             The attribute values.
         """
+        # if the attribute already exists, remove it and replace it
+        if hasattr(self, attribute_name):
+            delattr(self, attribute_name)
+            # remove from the list of data attributes
+            self.data_attributes.remove(attribute_name)
+
         setattr(self, attribute_name,
                 self.Data(attribute_height, attribute_values))
 
