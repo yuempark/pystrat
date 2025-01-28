@@ -151,8 +151,7 @@ class Fence:
              sec_names_rotate=True,
              sec_names_fontsize=10,
              **kwargs):
-        """
-        Plot a fence diagram
+        """Plot a fence diagram
 
         Parameters
         ----------
@@ -200,9 +199,19 @@ class Fence:
 
         sec_names_fontsize : float, optional
             Fontsize for section names. Default is 10.
+
+        Returns
+        -------
+        fig : matplotlib.pyplot.Figure
+            Returned if no figure is provided
+
+        axes : list
+            List of matplotlib axes objects for each column.
+
+        axes_dat : list
+            List of matplotlib axes objects for data attribute. Returned if data_attributes is not None. Each entry in the list is a list of axes for each data attribute. Sections with no data attributes will have a None entry.
         """
-        # before setting anything up, need to know if we're plotting data attributes and
-        # how many
+        # before setting anything up, need to know if we're plotting data attributes and how many
         if data_attributes is not None:
             # number of attributes to plot per section
             n_att_sec = np.zeros(self.n_sections).astype(int)
@@ -212,7 +221,7 @@ class Fence:
                         n_att_sec[ii] = n_att_sec[ii] + 1
             assert np.sum(n_att_sec) > 0, 'data attribute not found in any sections'
             # update sec_width to reflect the number of data attributes being plotted
-            sec_wid = sec_wid/np.max(n_att_sec+1)
+            sec_wid = sec_wid/np.max(n_att_sec)
 
             # set up a default style if none supplied
             if data_attribute_styles is None:
@@ -286,6 +295,7 @@ class Fence:
                     plt.axes([ax_left_coords[ii], 0, x * sec_wid, 1],
                              xlim=[0, 1]))
                 
+        # create data attribute axes
         if data_attributes is not None:
             axes_dat = []
             for ii in range(self.n_sections):
