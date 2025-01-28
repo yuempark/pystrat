@@ -123,7 +123,7 @@ class Fence:
         idx = np.argsort(self.coordinates)
         self.coordinates = self.coordinates[idx]
         self.sections = [self.sections[x] for x in idx]
-        self.datums = self.datums[idx]
+        self.datums = [self.datums[x] for x in idx]
         if self.correlations is not None:
             self.correlations = self.correlations[idx]
 
@@ -144,7 +144,7 @@ class Fence:
              distance_spacing=False,
              plot_distances=[],
              distance_labels=False,
-             plot_correlations=False,
+             plot_correlations=None,
              data_attributes=None,
              data_attribute_styles=None,
              section_plot_style={},
@@ -192,8 +192,8 @@ class Fence:
             sections for schematic distances. if true, uses actual distances between
             sections.
 
-        plot_correlations : boolean
-            whether or not to plot correlated horizons
+        plot_correlations : boolean, optional
+            Whether or not to plot correlated horizons. Default is True; this parameter is ignored if correlations is None.
 
         data_attributes : 1d array like (defaults to None)
             list of data attributes to plot. if the attribute is not defined for a 
@@ -370,6 +370,10 @@ class Fence:
             axes[ii].spines['bottom'].set_visible(False)
 
         # plot correlated beds as connections
+        if self.correlations is not None and plot_correlations is None:
+            plot_correlations = True
+        else:
+            plot_correlations = False
         if plot_correlations:
             for ii in range(self.correlations.shape[1]):
                 for jj in range(self.n_sections - 1):
