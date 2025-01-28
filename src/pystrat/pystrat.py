@@ -142,12 +142,12 @@ class Fence:
              legend_hei=0.5,
              sec_wid=0.8,
              distance_spacing=False,
-             plot_distances=[],
+             plot_distances=None,
              distance_labels=False,
              plot_correlations=None,
              data_attributes=None,
              data_attribute_styles=None,
-             section_plot_style={},
+             section_plot_style=None,
              sec_names_rotate=True,
              sec_names_fontsize=10,
              **kwargs):
@@ -183,35 +183,29 @@ class Fence:
             whether or not to scale the distances between sections according to the
             distances between self.coordinates, or plot_distances, if set
 
-        plot_distances : 1d array like
-            distances between sections to use for plotting. length is one less than
-            n_sections. 
+        plot_distances : 1d array-like, optional
+            Distances between sections to use for plotting. Default is None. If None, then distances are calculated from coordinates. If set, then length (n_sections - 1).
 
-        distance labels : 1d array like or boolean
-            length is (n_sections - 1) and permits manual labeling of distances 
-            sections for schematic distances. if true, uses actual distances between
-            sections.
+        distance labels : 1d array-like or boolean, optional
+            Labeling of distances between sections. Default is False. If False, no labels are plotted. If True, labels are plotted with the actual distances between sections (based on coordinates). If an array-like, then length must be (n_sections - 1) and values specify manual labeling of distances.
 
         plot_correlations : boolean, optional
             Whether or not to plot correlated horizons. Default is True; this parameter is ignored if correlations is None.
 
-        data_attributes : 1d array like (defaults to None)
-            list of data attributes to plot. if the attribute is not defined for a 
-            particular section, it is not plotted.
+        data_attributes : 1d array-like, optional
+            List of data attributes to plot. Default is None. If None, no data attributes are plotted. If the attribute is not defined for a particular section, it is not plotted.
 
-        data_attribute_styles : 1d array like (defaults to None)
-            style dictionary or dictionaries to use to plot data attributes. Either same
-            length as data_attributes, or length of one
+        data_attribute_styles : 1d array-like, optional
+            Style dictionary or dictionaries to use to plot data attributes. Defaults to None, in which case a default style is used. Either same length as data_attributes, or length of one. If length of one, then the same style is used for all data attributes.
         
-        section_plot_styles : dictionary
-            dictionary of style parameters passed to section plotting
+        section_plot_styles : dictionary, optional
+            Dictionary of style parameters passed to section plotting. Default is None. If None, a default style is used.
 
-        sec_names_rotate : boolean (defaults to True)
-            whether to plot section names vertically or horizontally above columns in
-            fence.
+        sec_names_rotate : boolean, optional
+            whether to plot section names vertically (True) or horizontally above columns in fence. Default is True.
 
-        sec_names_fontsize : float (defaults to 10)
-            fontsize for section names
+        sec_names_fontsize : float, optional
+            Fontsize for section names. Default is 10.
         """
         # before setting anything up, need to know if we're plotting data attributes and
         # how many
@@ -252,7 +246,7 @@ class Fence:
         # if user wants non-uniform spacing between sections in fence diagram
         if distance_spacing:
             # distances between sections
-            if len(plot_distances) == 0:
+            if plot_distances is None:
                 distances = np.diff(self.coordinates)
                 coordinates = self.coordinates
             else:
@@ -335,6 +329,8 @@ class Fence:
                         axes_dat[ii][jj].set_ylim([min_height, max_height])
 
         # then plot sections
+        if section_plot_style is None:
+            section_plot_style = {}
         for ii, section in enumerate(self.sections):
             section.plot(style, ax=axes[ii], **section_plot_style)
 
