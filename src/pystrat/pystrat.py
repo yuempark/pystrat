@@ -295,13 +295,10 @@ class Fence:
         data_att_wid = sec_wid / sec_wid_fac # a above
         bi = dist_norm * col_buffer_fac * sec_wid # bi above
         col_widths = sec_wid + n_att_sec * data_att_wid # cw above
-        print(f'bi: {bi}')
-        print(f'col_widths: {col_widths}')
 
         # compute left coordinates of section axes
         ax_left_coords = np.cumsum(np.insert(col_widths, 0, 0))[0:-1] + \
                          np.cumsum(np.insert(bi, 0, 0))
-        print(f'ax_left_coords: {ax_left_coords}')
 
         # set up section axes
         axes = []
@@ -381,8 +378,18 @@ class Fence:
                 for jj in range(self.n_sections - 1):
                     # need to account for data attribute axes
                     if data_attributes is not None:
-                        # point needs to account for the width of the section axis including unit labels
-                        xyA = [axes[jj].get_xlim()[1] + np.max(n_att_sec[jj]), self.correlations[jj, ii]]
+                        # point needs to account for the width of the column up to the rightmost data attribute axis
+                        if n_att_sec[jj] > 0:
+                            # need x-coord of max x-value in rightmost data attribute axes
+                            # x-coord has to be transformed to jth section axes coordinate system
+                            x_right_dat = axes_dat[jj][-1].get_xlim()[1] # coordinate in data attribute axes
+                            x_right_disp = axes_dat[jj][-1].transData.transform((x_right_dat, 0)) # coordinate in display axes
+                            x_right = axes[jj].transData.inverted().transform(x_right_disp)[0] # coordinate in section axes
+                            xyA = [x_right, self.correlations[jj, ii]]
+
+                        else:
+                            xyA = [axes[jj].get_xlim()[1],
+                                self.correlations[jj, ii]]
                         # don't forget about unit labels
                         xyB = [axes[jj].get_xlim()[0], self.correlations[jj + 1, ii]]
                     else:
