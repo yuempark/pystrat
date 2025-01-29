@@ -1,13 +1,13 @@
 ﻿name,path
-pillow,example-data\annotations\pillow.png
-geochron,example-data\annotations\geochron.png
-dropstone,example-data\annotations\dropstone.png
-hcs,example-data\annotations\hcs.png
-wave ripples,example-data\annotations\wave ripples.png
-nodule,example-data\annotations\nodule.png
-current,example-data\annotations\current.png
-swaley,example-data\annotations\swaley.png
-climbing ripples,example-data\annotations\climbing ripples.png
-slump,example-data\annotations\slump.png
-black shale,example-data\annotations\black shale.png
-stromatolite,example-data\annotations\stromatolite.png
+pillow,example-data/annotations/pillow.png
+geochron,example-data/annotations/geochron.png
+dropstone,example-data/annotations/dropstone.png
+hcs,example-data/annotations/hcs.png
+wave ripples,example-data/annotations/wave ripples.png
+nodule,example-data/annotations/nodule.png
+current,example-data/annotations/current.png
+swaley,example-data/annotations/swaley.png
+climbing ripples,example-data/annotations/climbing ripples.png
+slump,example-data/annotations/slump.png
+black shale,example-data/annotations/black shale.png
+stromatolite,example-data/annotations/stromatolite.png

@@ -1630,8 +1630,17 @@ def plot_annotation(annotation_path, pos, height, ax,):
 
     """
 
-    # load annotation
-    annotation = Image.open(annotation_path)
+    # os agnostic path
+    annotation_path = os.path.normpath(annotation_path)
+
+    # try to load the annotation image
+    try:
+        annotation = Image.open(annotation_path)
+    except FileNotFoundError:
+        warnings.warn(f'Annotation {annotation_path} not found.')
+        return
+
+    # convert to numpy array
     ann_arr = np.array(annotation)
     
     # axis inches per data unit
