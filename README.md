@@ -22,7 +22,10 @@ Advanced usage for plotting sections and fence diagrams is also covered in the d
 - [sections](https://pystrat.readthedocs.io/en/latest/sections.html)
 - [fence diagrams](https://pystrat.readthedocs.io/en/latest/fence%20diagrams.html)
 
-Illustrations of the available swatches that can be implemented using the `style.csv` are provided in [swatches.md](swatches.md).
+Illustrations and reference codes of the [swatches](https://pystrat.readthedocs.io/en/latest/swatches.html) are also available in the documentation.
+
+Full documentation is available at:
+https://pystrat.readthedocs.io/en/latest/
 
 ## Contributing
 

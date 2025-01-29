@@ -2,14 +2,14 @@
 
 This document provides a broad overview of lithological swatches available for use within `pystrat`. These lithological aid in the representation of different rock types in stratigraphic columns, sections, and charts. These patterns were developed by the Geologic Data Subcommittee of the Federal Geographic Data Committee and the USGS and were published as *FGDC Digital Cartographic Standard for Geologic Map Symbolization (PostScript Implementation) Techniques and Methods 11-A2* in 2006 (https://pubs.usgs.gov/tm/2006/11A02/FGDCgeostdTM11A2_web_all.pdf).
 
-# Usage in pystrat
+## Usage in pystrat
 
 The style.csv file can have a column called `swatch` in which the number assigned to the lithological patterns in this USGS document are used.
 
 ## Sedimentary-Rock Lithologic Patterns
 
-![Sedimentary Rock Lithologic Patterns 1](images/swatch_sed1.png)
-![Sedimentary Rock Lithologic Patterns 2](images/swatch_sed2.png)
+![Sedimentary Rock Lithologic Patterns 1](../images/swatch_sed1.png)
+![Sedimentary Rock Lithologic Patterns 2](../images/swatch_sed2.png)
 
 - **601 Gravel or Conglomerate (1st option)**
 - **602 Gravel or Conglomerate (2nd option)**
@@ -98,7 +98,7 @@ The style.csv file can have a column called `swatch` in which the number assigne
 
 ## Metamorphic-Rock, Igneous-Rock, and Vein-Matter Lithologic Patterns
 
-![Igneous and Metamorphic Rock Lithologic Patterns](images/swatch_ign_meta.png)
+![Igneous and Metamorphic Rock Lithologic Patterns](../images/swatch_ign_meta.png)
 
 - **704 Schistose or Gneissoid Granite**
 - **705 Schist**
@@ -130,4 +130,3 @@ The style.csv file can have a column called `swatch` in which the number assigne
 - **731 Vitrophyre**
 - **732 Quartz**
 - **733 Ore**
-

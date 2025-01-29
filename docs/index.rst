@@ -16,6 +16,7 @@ Contents
     Quickstart <quickstart>
     Sections <sections>
     Fence Diagrams <fence diagrams>
+    Swatches <swatches>
 
 .. toctree::
     :name: Package Info
@@ -31,5 +32,4 @@ Indices and tables
 ==================
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`

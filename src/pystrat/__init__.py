@@ -16,5 +16,3 @@ finally:
     del version, PackageNotFoundError
 
 from .pystrat import *
-
-__all__ = [pystrat]

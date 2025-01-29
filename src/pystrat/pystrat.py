@@ -25,14 +25,14 @@ import matplotlib.pyplot as plt
 import os
 import copy
 
-# import additional modules
+# warnings
 import warnings
+
+# plotting
 from matplotlib.patches import Rectangle
 import matplotlib.patches as patches
 from matplotlib.patches import ConnectionPatch
-from mpl_toolkits.axes_grid1 import Divider, Size
 from PIL import Image
-# import cvxpy as cp
 
 ##
 ## Global vars
@@ -1160,6 +1160,9 @@ class Section:
 
         def add_data_facies(self, section):
             """
+            .. deprecated:: 2.0
+                Functionality will be changed in future versions.
+
             Extract the facies associated with each data point.
 
             Parameters
@@ -1178,6 +1181,7 @@ class Section:
             If the sample comes from the lower unit, subtract 0.5. If the sample comes
             from the upper unit, add 0.5.
             """
+            warnings.warn('add_data_facies() is deprecated.', DeprecationWarning, stacklevel=2)
             # make sure the data points are sorted
             if not np.array_equal(np.sort(self.height), self.height):
                 raise Exception(
@@ -1218,6 +1222,9 @@ class Section:
 
         def clean_data_facies_helper(self, data_name):
             """
+            .. deprecated:: 2.0
+                Functionality will be changed in future versions.
+
             Prints the code for cleaning up data points on unit boundaries.
 
             Parameters
@@ -1234,6 +1241,8 @@ class Section:
 
             After fixing all changes, copy and paste the dataframe into the data .csv.
             """
+            warnings.warn('clean_data_facies_helper() is deprecated.', DeprecationWarning, stacklevel=2)
+
             # check that add_data_facies has been run
             if 'facies' not in self.height_attributes:
                 raise Exception(
@@ -1278,6 +1287,9 @@ class Section:
 
         def clean_data_facies(self, section):
             """
+            .. deprecated:: 2.0
+                Functionality will be changed in future versions.
+
             Extract the facies associated with each data point AFTER cleaning up
             the samples that are from unit boundaries using Data.clean_data_facies_helper().
 
@@ -1289,6 +1301,8 @@ class Section:
                 given Data object, accessing the Section object's attributes
                 is not elegant, so we pass it as an argument for now...)
             """
+            warnings.warn('clean_data_facies() is deprecated.', DeprecationWarning, stacklevel=2)
+
             # convert unit_number to int
             self.unit_number = np.array(self.unit_number, dtype=int)
 
@@ -1380,8 +1394,8 @@ class Style():
             A scaling factor to modify the height of each unit in the
             legend only.
 
-        ax : matplotlib.Axes (default None)
-            Axis to plot into. If None, creates an axis
+        ax : matplotlib.Axes, optional
+            Axis to plot into, defaults to None. If None, creates an axis.
 
         fontsize : float (default 10)
             Fontsize for text in the legend.
@@ -1616,8 +1630,17 @@ def plot_annotation(annotation_path, pos, height, ax,):
 
     """
 
-    # load annotation
-    annotation = Image.open(annotation_path)
+    # os agnostic path
+    annotation_path = os.path.normpath(annotation_path)
+
+    # try to load the annotation image
+    try:
+        annotation = Image.open(annotation_path)
+    except FileNotFoundError:
+        warnings.warn(f'Annotation {annotation_path} not found.')
+        return
+
+    # convert to numpy array
     ann_arr = np.array(annotation)
     
     # axis inches per data unit
