@@ -20,7 +20,7 @@ See the [quickstart](https://pystrat.readthedocs.io/en/latest/quickstart.html) t
 
 Advanced usage for plotting sections and fence diagrams is also covered in the documentation:
 - [sections](https://pystrat.readthedocs.io/en/latest/sections.html)
-- [fence diagrams](https://pystrat.readthedocs.io/en/latest/fence%20diagrams.html)
+- [fence diagrams](https://pystrat.readthedocs.io/en/latest/fence_diagrams.html)
 
 Illustrations and reference codes of the [swatches](https://pystrat.readthedocs.io/en/latest/swatches.html) are also available in the documentation.
 
