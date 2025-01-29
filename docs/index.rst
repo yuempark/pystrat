@@ -15,7 +15,7 @@ Contents
 
     Quickstart <quickstart>
     Sections <sections>
-    Fence Diagrams <fence diagrams>
+    Fence Diagrams <fence-diagrams>
     Swatches <swatches>
 
 .. toctree::
