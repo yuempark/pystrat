@@ -16,11 +16,11 @@ pip install pystrat
 
 ## Usage
 
-See the [quickstart]() to learn the basics.
+See the [quickstart](https://pystrat.readthedocs.io/en/latest/quickstart.html) to learn the basics.
 
 Advanced usage for plotting sections and fence diagrams is also covered in the documentation:
-- [sections]()
-- [fence diagrams]()
+- [sections](https://pystrat.readthedocs.io/en/latest/sections.html)
+- [fence diagrams](https://pystrat.readthedocs.io/en/latest/fence%20diagrams.html)
 
 Illustrations of the available swatches that can be implemented using the `style.csv` are provided in [swatches.md](swatches.md).
 

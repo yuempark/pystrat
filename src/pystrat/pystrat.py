@@ -88,149 +88,136 @@ class Fence:
 
     def __init__(self,
                  sections,
-                 datums=[],
-                 correlations=[],
-                 coordinates=[]):
+                 datums=None,
+                 correlations=None,
+                 coordinates=None):
         """Initialize fence.
         """
         self.n_sections = len(sections)
         self.sections = [copy.deepcopy(section) for section in sections]
-        datums = np.array(datums)
-        if len(datums) == 0:
+        
+        # if no datums provided, then assume bottom of each section is datum
+        if datums is None:
             datums = np.zeros(self.n_sections)
             for ii in range(self.n_sections):
                 datums[ii] = sections[ii].base_height[0]
         else:
-            assert len(
-                datums
-            ) == self.n_sections, 'Number of datums should equal number of sections'
+            assert len(datums) == self.n_sections, \
+                'Number of datums should equal number of sections'
         self.datums = datums
 
-        correlations = np.array(correlations)
-        if len(correlations) != 0:
-            assert correlations.shape[
-                0] == self.n_sections, 'Number of correlated horizons should match number of sections'
+        if correlations is not None:
+            assert correlations.shape[0] == self.n_sections, \
+                'Number of correlated horizons should match number of sections'
         self.correlations = correlations
 
-        coordinates = np.array(coordinates)
-        if len(coordinates) != 0:
-            assert len(
-                coordinates
-            ) == self.n_sections, 'Number of section distances should match number of sections'
-
-        # if coordinates not provided, assume sections are equally spaced in order provided
-        if len(coordinates) == 0:
+        # if coordinates not provided, then assume sections are equally spaced
+        if coordinates is None:
             self.coordinates = np.cumsum(np.ones(self.n_sections))
         else:
+            assert len(coordinates) == self.n_sections, \
+                'Number of section distances should match number of sections'
             self.coordinates = coordinates
 
         # order sections, correlations, datums by coordinates
-        if len(self.coordinates) > 0:
-            idx = np.argsort(self.coordinates)
-            self.coordinates = self.coordinates[idx]
-            self.sections = [self.sections[x] for x in idx]
-            self.datums = self.datums[idx]
-            if len(self.correlations) > 0:
-                self.correlations = self.correlations[idx]
+        idx = np.argsort(self.coordinates)
+        self.coordinates = self.coordinates[idx]
+        self.sections = [self.sections[x] for x in idx]
+        self.datums = [self.datums[x] for x in idx]
+        if self.correlations is not None:
+            self.correlations = self.correlations[idx]
 
         # apply datums as shift to sections and correlations
         for ii in range(self.n_sections):
             self.sections[ii].shift_heights(-self.datums[ii])
-            if len(self.correlations) > 0:
+            if self.correlations is not None:
                 self.correlations[ii, :] = self.correlations[ii, :] - \
                                             self.datums[ii]
 
     def plot(self,
              style,
              fig=None,
-             legend=False,
-             legend_wid=0.1,
-             legend_hei=0.5,
-             sec_wid=0.8,
+             sec_wid_fac=1,
+             col_buffer_fac=0.2,
              distance_spacing=False,
-             plot_distances=[],
+             plot_distances=None,
              distance_labels=False,
-             plot_correlations=False,
+             distance_labels_style=None,
+             plot_correlations=None,
              data_attributes=None,
              data_attribute_styles=None,
-             section_plot_style={},
+             section_plot_style=None,
              sec_names_rotate=True,
              sec_names_fontsize=10,
              **kwargs):
-        """
-        Plot a fence diagram
+        """Plot a fence diagram
 
         Parameters
         ----------
         style : Style
             A Style object.
 
-        fig : matplotlib.figure.Figure
-            Figure to plot into if desired.
+        fig : matplotlib.figure.Figure, optional
+            Figure to plot into if desired, by default None. If None, will create and return a new figure.
 
-        legend : boolean
-            Whether or not to include a legend for facies
+        sec_wid_fac : float, optional
+            Ratio of section axis width to data attribute axes widths, defaults to 1. A value of 1 means that the section axis is the same width as the data attribute axes. Values less than 1 mean that the section axis is narrower than the data attribute axes.
 
-        legend_wid : float [0, 1]
-            Fractional width (figure coordinates) that legend occupies in fence diagram
+        col_buffer_fac : float, optional
+            Fraction of section width used to buffer between columns in the fence, defaults to 0.2. A value of 0 means no buffer and columns immediately abut each other.
 
-        legend_hei : float [0, 1]
-            fractional height of legend
+        distance_spacing : boolean, optional
+            Whether or not to scale the distances between sections according to the distances between self.coordinates, or plot_distances, if set. Default is False. If False, then sections are equally spaced.
 
-        sec_wid : float (0, 1]
-            width of section as a fraction of the columns containing the sections.
-            1 means that the right limit of the section will be adjacent to the left
-            limit of the subsequent section.
+        plot_distances : 1d array-like, optional
+            Distances between sections to use for plotting. Default is None. If None, then distances are calculated from coordinates. If set, then length (n_sections - 1).
 
-            Will automatically be divided by the maximum number of data attributes to be
-            plotted.
+        distance_labels : 1d array-like or boolean, optional
+            Labeling of distances between sections. Default is False. If False, no labels are plotted. If True, labels are plotted with the actual distances between sections (based on coordinates). If an array-like, then length must be (n_sections - 1) and values specify manual labeling of distances.
 
-        distance_spacing : boolean
-            whether or not to scale the distances between sections according to the
-            distances between self.coordinates, or plot_distances, if set
+        distance_labels_style : dictionary, optional
+            Style dictionary for distance labels. Default is None. If None, a default style is used. Dictionary is passed to matplotlib.pyplot.annotate.
 
-        plot_distances : 1d array like
-            distances between sections to use for plotting. length is one less than
-            n_sections. 
+        plot_correlations : boolean, optional
+            Whether or not to plot correlated horizons. Default is True; this parameter is ignored if correlations is None.
 
-        distance labels : 1d array like or boolean
-            length is (n_sections - 1) and permits manual labeling of distances 
-            sections for schematic distances. if true, uses actual distances between
-            sections.
+        data_attributes : 1d array-like, optional
+            List of data attributes to plot. Default is None. If None, no data attributes are plotted. If the attribute is not defined for a particular section, it is not plotted.
 
-        plot_correlations : boolean
-            whether or not to plot correlated horizons
-
-        data_attributes : 1d array like (defaults to None)
-            list of data attributes to plot. if the attribute is not defined for a 
-            particular section, it is not plotted.
-
-        data_attribute_styles : 1d array like (defaults to None)
-            style dictionary or dictionaries to use to plot data attributes. Either same
-            length as data_attributes, or length of one
+        data_attribute_styles : 1d array-like, optional
+            Style dictionary or dictionaries to use to plot data attributes. Defaults to None, in which case a default style is used. Either same length as data_attributes, or length of one. If length of one, then the same style is used for all data attributes.
         
-        section_plot_styles : dictionary
-            dictionary of style parameters passed to section plotting
+        section_plot_styles : dictionary, optional
+            Dictionary of style parameters passed to section plotting. Default is None. If None, a default style is used.
 
-        sec_names_rotate : boolean (defaults to True)
-            whether to plot section names vertically or horizontally above columns in
-            fence.
+        sec_names_rotate : boolean, optional
+            whether to plot section names vertically (True) or horizontally above columns in fence. Default is True.
 
-        sec_names_fontsize : float (defaults to 10)
-            fontsize for section names
+        sec_names_fontsize : float, optional
+            Fontsize for section names. Default is 10.
+
+        Returns
+        -------
+        fig : matplotlib.pyplot.Figure
+            Returned if no figure is provided
+
+        axes : list
+            List of matplotlib axes objects for each column.
+
+        axes_dat : list
+            List of matplotlib axes objects for data attribute. Returned if data_attributes is not None. Each entry in the list is a list of axes for each data attribute. Sections with no data attributes will have a None entry.
         """
-        # before setting anything up, need to know if we're plotting data attributes and
-        # how many
+        # before setting anything up, need to know if we're plotting data attributes and how many
+        # number of attributes to plot per section
+        n_att_sec = np.zeros(self.n_sections).astype(int)
         if data_attributes is not None:
-            # number of attributes to plot per section
-            n_att_sec = np.zeros(self.n_sections).astype(int)
             for ii in range(self.n_sections):
                 for attribute in data_attributes:
                     if hasattr(self.sections[ii], attribute):
                         n_att_sec[ii] = n_att_sec[ii] + 1
             assert np.sum(n_att_sec) > 0, 'data attribute not found in any sections'
             # update sec_width to reflect the number of data attributes being plotted
-            sec_wid = sec_wid/np.max(n_att_sec+1)
+            # sec_wid = sec_wid/np.max(n_att_sec)
 
             # set up a default style if none supplied
             if data_attribute_styles is None:
@@ -252,58 +239,77 @@ class Fence:
         max_height = np.max(
             [section.top_height[-1] for section in self.sections])
 
-        # if spacing sections realistically, set up axes as such
-        axes = []
-        n_axes = self.n_sections
-        # if user wants non-uniform spacing between sections in fence diagram
+        '''
+        The Fence class conceptualizes section geometry as in the following diagram.
+        ┌──────┬──┬──┐b┌──────┬──┐b┌──────┐
+        │      │  │  │ │      │  │ │      │
+        │      │  │  │ │      │  │ │      │
+        │      │  │  │ │      │  │ │      │
+        │      │  │  │ │      │  │ │      │
+        │      │  │  │ │      │  │ │      │
+        │      │  │  │ │      │  │ │      │
+        │      │  │  │ │      │  │ │      │
+        │      │  │  │ │      │  │ │      │
+        │      │  │  │ │      │  │ │      │
+        │  x   │a │a │ │  x   │a │ │  x   │
+        └──────┴──┴──┘ └──────┴──┘ └──────┘
+                                            
+        └────────────┘ └─────────┘ └──────┘
+            cw1          cw2        cw3    
+
+        x: width of each section axis (same for all sections)
+        a: width of each data attribute axis (same for all data attributes)
+        b: buffer space between section axes. the minimum buffer is set by tau*x
+            tau: fraction of section width that is buffer space, tau is col_buffer_fac                    
+        cw1: width of column 1 (similarly for cw2, cw3)
+
+        The sum over cw's and b's is 1. 
+        x is related to a as follows:
+            x/a = gamma where gamma is sec_wid_fac
+        When plot distances (dist) vary, the smallest plot distance is set to tau*x, and all other plot distances are scaled accordingly.
+            bi = dist/dist_min * tau*x
+
+        Yields the following equation in x:
+        n*x + m/gamma*x + sum(di)*tau*x = 1
+        where n is the number of sections, m is the total number of data attributes present across all sections, and di is the scaled distance between sections i and i+1 as defined above.
+
+        x is then:
+        x = 1/(n + m/gamma + sum(di)*tau)
+        '''
+
+        # set up buffer distance between columns
         if distance_spacing:
             # distances between sections
-            if len(plot_distances) == 0:
+            if plot_distances is None:
                 distances = np.diff(self.coordinates)
-                coordinates = self.coordinates
             else:
                 assert len(plot_distances) == (
                     self.n_sections -
                     1), 'length of plot_distances must be n_sections - 1'
                 distances = plot_distances
-                coordinates = np.insert(np.cumsum(plot_distances), 0, 0)
-
-            beta = np.min(distances) / (np.max(coordinates) -
-                                        np.min(coordinates))
-            if legend:
-                # x is width of section axes in figure coordinates
-                # x = beta*sec_wid/(1 + beta + beta*sec_wid)
-                x = beta * sec_wid * (1 - legend_wid) / (1 + beta * sec_wid)
-                # D is width in figure coordinates of area to space sections
-                # D = (1-x)/(1+beta)
-                D = 1 - x - legend_wid
-                delta = beta * D
-            else:
-                x = beta * sec_wid / (1 + beta * sec_wid)
-                D = 1 - x
-
-            # now set up axis in figure coordinates
-            coordinates = coordinates - np.min(
-                coordinates)  # center coordinates
-            ax_left_coords = coordinates / np.max(coordinates) * D
-
-            for ii in range(self.n_sections):
-                axes.append(
-                    plt.axes([ax_left_coords[ii], 0, x * sec_wid, 1],
-                             xlim=[0, 1], zorder=10))
-
-        # if user wants uniform spacing between sections in fence diagram
+        
+        # uniform buffer spacing if not specified
         else:
-            x = sec_wid * (1 - legend_wid) / (self.n_sections - 1 + sec_wid)
-            D = 1 - x - legend_wid
-            delta = D / (self.n_sections - 1)
-            ax_left_coords = np.arange(0, D + delta, delta)
-            for ii in range(self.n_sections):
-                # axes.append(fig.add_subplot(1, n_axes, ii+1))
-                axes.append(
-                    plt.axes([ax_left_coords[ii], 0, x * sec_wid, 1],
-                             xlim=[0, 1]))
-                
+            distances = np.ones(self.n_sections - 1)
+
+        # solve for x, a, and bi
+        dist_norm = distances / np.min(distances) # di above
+        m = np.sum(n_att_sec) # m above
+        sec_wid = 1 / (self.n_sections + m/sec_wid_fac + np.sum(dist_norm)*col_buffer_fac)  # x above
+        data_att_wid = sec_wid / sec_wid_fac # a above
+        bi = dist_norm * col_buffer_fac * sec_wid # bi above
+        col_widths = sec_wid + n_att_sec * data_att_wid # cw above
+
+        # compute left coordinates of section axes
+        ax_left_coords = np.cumsum(np.insert(col_widths, 0, 0))[0:-1] + \
+                         np.cumsum(np.insert(bi, 0, 0))
+
+        # set up section axes
+        axes = []
+        for ii in range(self.n_sections):
+            axes.append(plt.axes([ax_left_coords[ii], 0, sec_wid, 1],))
+
+        # set up data attribute axes
         if data_attributes is not None:
             axes_dat = []
             for ii in range(self.n_sections):
@@ -316,17 +322,11 @@ class Fence:
                 for jj in range(len(data_attributes)):
                     if hasattr(self.sections[ii], data_attributes[jj]):
                         cur_sec_dat_axes.append(
-                            plt.axes([ax_left_coords[ii] + (jj+1) * x * sec_wid, 0,
-                                        x * sec_wid, 1], zorder=1))
+                            plt.axes([ax_left_coords[ii] + sec_wid + jj * data_att_wid, 0,
+                                        data_att_wid, 1]))
                     else:
                         cur_sec_dat_axes.append(None)
                 axes_dat.append(cur_sec_dat_axes)
-
-        if legend:
-            leg_left_coord = 1 - delta
-            axes.append(
-                plt.axes([leg_left_coord, 0, x * sec_wid, legend_hei],
-                         xlim=[0, 1]))
 
         # enforce axis limits before plotting to maintain swatch scaling
         for ii in range(self.n_sections):
@@ -341,6 +341,8 @@ class Fence:
                         axes_dat[ii][jj].set_ylim([min_height, max_height])
 
         # then plot sections
+        if section_plot_style is None:
+            section_plot_style = {}
         for ii, section in enumerate(self.sections):
             section.plot(style, ax=axes[ii], **section_plot_style)
 
@@ -352,11 +354,6 @@ class Fence:
                         self.sections[ii].plot_data_attribute(attribute, 
                                                               ax=axes_dat[ii][jj],
                                                               style=data_attribute_styles[jj])
-
-        # plot and format legend
-        if legend:
-            style.plot_legend(ax=axes[-1])
-            axes[-1].set_xticklabels([])
 
         # then move and scale axes so that vertical coordinate is consistent and datum is at same height in figure
         for ii in range(self.n_sections):
@@ -376,18 +373,31 @@ class Fence:
             axes[ii].spines['bottom'].set_visible(False)
 
         # plot correlated beds as connections
+        if self.correlations is not None and plot_correlations is None:
+            plot_correlations = True
+        else:
+            plot_correlations = False
         if plot_correlations:
             for ii in range(self.correlations.shape[1]):
                 for jj in range(self.n_sections - 1):
                     # need to account for data attribute axes
                     if data_attributes is not None:
-                        # point needs to account for the width of the section axis
-                        # including unit labels
-                        xyA = [np.ptp(axes[jj].get_xlim()) + np.max(n_att_sec[jj]), self.correlations[jj, ii]]
+                        # point needs to account for the width of the column up to the rightmost data attribute axis
+                        if n_att_sec[jj] > 0:
+                            # need x-coord of max x-value in rightmost data attribute axes
+                            # x-coord has to be transformed to jth section axes coordinate system
+                            x_right_dat = axes_dat[jj][-1].get_xlim()[1] # coordinate in data attribute axes
+                            x_right_disp = axes_dat[jj][-1].transData.transform((x_right_dat, 0)) # coordinate in display axes
+                            x_right = axes[jj].transData.inverted().transform(x_right_disp)[0] # coordinate in section axes
+                            xyA = [x_right, self.correlations[jj, ii]]
+
+                        else:
+                            xyA = [axes[jj].get_xlim()[1],
+                                self.correlations[jj, ii]]
                         # don't forget about unit labels
                         xyB = [axes[jj].get_xlim()[0], self.correlations[jj + 1, ii]]
                     else:
-                        xyA = [np.ptp(axes[jj].get_xlim()), self.correlations[jj, ii]]
+                        xyA = [axes[jj].get_xlim()[1], self.correlations[jj, ii]]
                         # xyB = [0, self.correlations[jj + 1, ii]]
                         xyB = [axes[jj].get_xlim()[0], self.correlations[jj + 1, ii]]
                     if np.any(np.isnan(xyA)) or np.any(np.isnan(xyB)):
@@ -412,6 +422,16 @@ class Fence:
         if distance_labels == False:
             pass
         elif (distance_labels == True) or (len(distance_labels) > 0):
+            # figure out styling
+            distance_labels_style_default = {'fontsize': 9,
+                                             'ha': 'center'}
+            if distance_labels_style is None:
+                distance_labels_style = distance_labels_style_default
+            else:
+                distance_labels_style = {**distance_labels_style_default,
+                                         **distance_labels_style}
+
+            # validate distance_labels
             if type(distance_labels) == bool:
                 distance_labels = np.diff(self.coordinates)
             else:
@@ -438,9 +458,9 @@ class Fence:
                 vert_axis_fact = (cur_y_coord-cur_ax_bbox[1,1])/(2*cur_ax_bbox[1,1]) + 1
                 plt.annotate(distance, (cur_x_coord/wid, vert_axis_fact),
                              xycoords='figure fraction',
-                             ha='center',
-                             fontsize=11)
+                             **distance_labels_style)
 
+        # figure out what to return
         if not fig_provided:
             if data_attributes is not None:
                 return fig, axes, axes_dat
@@ -508,6 +528,9 @@ class Section:
                   'annotations must have a height column'
             assert 'annotation' in annotations.columns, \
                 'annotations must have an annotation column'
+            # if DataFrame is empty, set to None
+            if annotations.empty:
+                annotations = None
 
         # check that the thicknesses are numeric
         # if thicknesses.dtype == np.object:
@@ -623,6 +646,7 @@ class Section:
 
         if style is None:
             style = {'marker': '.', 
+                     'markersize': 5,
                     'color': 'k',
                     'linestyle': ''}
         assert hasattr(self, attribute), 'Section does not have requested attribute.'
@@ -661,20 +685,17 @@ class Section:
         linewidth : float
             The linewidth when drawing the stratigraphic section.
 
-        annotation_height : float
-            The height in inches for annotation graphics. Set to zero to not plot
-            annotations.
+        annotation_height : float, optional
+            The height in inches for annotation graphics. Defaults to 0.15. Set to zero to not plot annotations.
 
-        label_units : boolean (default: False)
-            Whether or not to label units on the left. If True, then section must
-            have unit names specified.
+        label_units : boolean, optional
+            Whether or not to label units on the left. Default is False. If True, then section must have unit names specified.
 
-        unit_label_wid_tot : float (default: 0.2)
-            Fractional width of the space to label units (if provided) on the left
-            of the column
+        unit_label_wid_tot : float, optional
+            Fractional width of the space to label units (if provided) on the left of the column. Default is 0.2.
 
-        unit_fontsize : float (default: 10)
-            Fontsize for labeling units.
+        unit_fontsize : float, optional
+            Fontsize for labeling units. Default is 8.
 
         """
         # get the attributes - implicitly checks if the attributes exist
@@ -737,7 +758,8 @@ class Section:
             strat_height = strat_height + this_thickness
 
         # plot annotations
-        if (self.annotations is not None) and (annotation_height != 0):
+        if (self.annotations is not None) and (annotation_height != 0) \
+            and (style.annotations is not None):
             # keep only annotations with symbols in style
             annotations = []
             heights = []
@@ -980,6 +1002,12 @@ class Section:
         attribute_values : 1d array_like
             The attribute values.
         """
+        # if the attribute already exists, remove it and replace it
+        if hasattr(self, attribute_name):
+            delattr(self, attribute_name)
+            # remove from the list of data attributes
+            self.data_attributes.remove(attribute_name)
+
         setattr(self, attribute_name,
                 self.Data(attribute_height, attribute_values))
 

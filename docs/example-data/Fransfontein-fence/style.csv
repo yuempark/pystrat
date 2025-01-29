@@ -1,0 +1,19 @@
+﻿lithofacies,R,G,B,width,swatch
+massive diamictite,131,110,172,1,681
+stratified diamictite,95,60,139,0.7,683
+debrite,60,156,167,0.8,602
+conglomerate,41,25,94,0.8,601
+breccia,60,156,167,0.8,606
+stromatolite,78,150,68,0.7,642
+microbiolite,78,150,68,0.4,642
+calcarenite,77,168,250,0.5,627
+calcisiltite,41,30,123,0.3,627
+dolo-oolite,244,242,48,0.6,644
+"doloarenite, Ao",244,242,48,0.5,642
+"doloarenite, Tg",184,8,120,0.5,642
+dolosiltite,79,113,183,0.3,642
+arenite,237,28,36,0.6,608
+siltstone,70,71,73,0.3,616
+shale,224,149,101,0.2,619
+ash,176,245,183,0.2,711
+COVER,255,255,255,0,0
