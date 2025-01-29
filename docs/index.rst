@@ -2,8 +2,14 @@
 pystrat
 =======
 
-.. include:: ../readme.md
-    :parser: myst_parser.sphinx_
+.. figure:: https://raw.githubusercontent.com/yuempark/pystrat/master/images/pystrat-logo.png
+   :width: 20 %
+   :alt: pystrat logo
+   :align: left
+
+Convenient stratigraphic plotting in Python.
+
+``pystrat`` seeks to make the plotting and analysis of stratigraphic data reproducible and simple.
 
 Contents
 ========
@@ -15,7 +21,7 @@ Contents
 
     Quickstart <quickstart>
     Sections <sections>
-    Fence Diagrams <fence-diagrams>
+    Fence Diagrams <fence_diagrams>
     Swatches <swatches>
 
 .. toctree::
