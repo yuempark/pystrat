@@ -142,6 +142,7 @@ class Fence:
              distance_spacing=False,
              plot_distances=None,
              distance_labels=False,
+             distance_labels_style=None,
              plot_correlations=None,
              data_attributes=None,
              data_attribute_styles=None,
@@ -171,8 +172,11 @@ class Fence:
         plot_distances : 1d array-like, optional
             Distances between sections to use for plotting. Default is None. If None, then distances are calculated from coordinates. If set, then length (n_sections - 1).
 
-        distance labels : 1d array-like or boolean, optional
+        distance_labels : 1d array-like or boolean, optional
             Labeling of distances between sections. Default is False. If False, no labels are plotted. If True, labels are plotted with the actual distances between sections (based on coordinates). If an array-like, then length must be (n_sections - 1) and values specify manual labeling of distances.
+
+        distance_labels_style : dictionary, optional
+            Style dictionary for distance labels. Default is None. If None, a default style is used. Dictionary is passed to matplotlib.pyplot.annotate.
 
         plot_correlations : boolean, optional
             Whether or not to plot correlated horizons. Default is True; this parameter is ignored if correlations is None.
@@ -418,6 +422,16 @@ class Fence:
         if distance_labels == False:
             pass
         elif (distance_labels == True) or (len(distance_labels) > 0):
+            # figure out styling
+            distance_labels_style_default = {'fontsize': 9,
+                                             'ha': 'center'}
+            if distance_labels_style is None:
+                distance_labels_style = distance_labels_style_default
+            else:
+                distance_labels_style = {**distance_labels_style_default,
+                                         **distance_labels_style}
+
+            # validate distance_labels
             if type(distance_labels) == bool:
                 distance_labels = np.diff(self.coordinates)
             else:
@@ -444,8 +458,7 @@ class Fence:
                 vert_axis_fact = (cur_y_coord-cur_ax_bbox[1,1])/(2*cur_ax_bbox[1,1]) + 1
                 plt.annotate(distance, (cur_x_coord/wid, vert_axis_fact),
                              xycoords='figure fraction',
-                             ha='center',
-                             fontsize=11)
+                             **distance_labels_style)
 
         # figure out what to return
         if not fig_provided:
