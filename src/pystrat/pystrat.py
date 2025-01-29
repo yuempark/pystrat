@@ -137,10 +137,8 @@ class Fence:
     def plot(self,
              style,
              fig=None,
-             legend=False,
-             legend_wid=0.1,
-             legend_hei=0.5,
-             sec_wid=0.8,
+             sec_wid_fac=1,
+             col_buffer_fac=0.2,
              distance_spacing=False,
              plot_distances=None,
              distance_labels=False,
@@ -161,17 +159,11 @@ class Fence:
         fig : matplotlib.figure.Figure, optional
             Figure to plot into if desired, by default None. If None, will create and return a new figure.
 
-        legend : boolean, optional
-            Whether or not to include a legend for the pystrat.Style, by default False.
+        sec_wid_fac : float, optional
+            Ratio of section axis width to data attribute axes widths, defaults to 1. A value of 1 means that the section axis is the same width as the data attribute axes. Values less than 1 mean that the section axis is narrower than the data attribute axes.
 
-        legend_wid : float [0, 1], optional
-            Fractional width (figure coordinates) that legend occupies in fence diagram, by default 0.1.
-
-        legend_hei : float [0, 1], optional
-            Fractional height of legend, by default 0.5.
-
-        sec_wid : float (0, 1], optional
-            Width of section as a fraction of the columns containing the sections, by default 0.8. 1 means that the right limit of the section will be adjacent to the left limit of the subsequent section. Automatically be divided by the maximum number of data attributes to be plotted. Values greater than 1 are permitted but may result in overlap between sections.
+        col_buffer_fac : float, optional
+            Fraction of section width used to buffer between columns in the fence, defaults to 0.2. A value of 0 means no buffer and columns immediately abut each other.
 
         distance_spacing : boolean, optional
             Whether or not to scale the distances between sections according to the distances between self.coordinates, or plot_distances, if set. Default is False. If False, then sections are equally spaced.
@@ -212,16 +204,16 @@ class Fence:
             List of matplotlib axes objects for data attribute. Returned if data_attributes is not None. Each entry in the list is a list of axes for each data attribute. Sections with no data attributes will have a None entry.
         """
         # before setting anything up, need to know if we're plotting data attributes and how many
+        # number of attributes to plot per section
+        n_att_sec = np.zeros(self.n_sections).astype(int)
         if data_attributes is not None:
-            # number of attributes to plot per section
-            n_att_sec = np.zeros(self.n_sections).astype(int)
             for ii in range(self.n_sections):
                 for attribute in data_attributes:
                     if hasattr(self.sections[ii], attribute):
                         n_att_sec[ii] = n_att_sec[ii] + 1
             assert np.sum(n_att_sec) > 0, 'data attribute not found in any sections'
             # update sec_width to reflect the number of data attributes being plotted
-            sec_wid = sec_wid/np.max(n_att_sec)
+            # sec_wid = sec_wid/np.max(n_att_sec)
 
             # set up a default style if none supplied
             if data_attribute_styles is None:
@@ -243,10 +235,45 @@ class Fence:
         max_height = np.max(
             [section.top_height[-1] for section in self.sections])
 
-        # if spacing sections realistically, set up axes as such
-        axes = []
-        n_axes = self.n_sections
-        # if user wants non-uniform spacing between sections in fence diagram
+        '''
+        The Fence class conceptualizes section geometry as in the following diagram.
+        ┌──────┬──┬──┐b┌──────┬──┐b┌──────┐
+        │      │  │  │ │      │  │ │      │
+        │      │  │  │ │      │  │ │      │
+        │      │  │  │ │      │  │ │      │
+        │      │  │  │ │      │  │ │      │
+        │      │  │  │ │      │  │ │      │
+        │      │  │  │ │      │  │ │      │
+        │      │  │  │ │      │  │ │      │
+        │      │  │  │ │      │  │ │      │
+        │      │  │  │ │      │  │ │      │
+        │  x   │a │a │ │  x   │a │ │  x   │
+        └──────┴──┴──┘ └──────┴──┘ └──────┘
+                                            
+        └────────────┘ └─────────┘ └──────┘
+            cw1          cw2        cw3    
+
+        x: width of each section axis (same for all sections)
+        a: width of each data attribute axis (same for all data attributes)
+        b: buffer space between section axes. the minimum buffer is set by tau*x
+            tau: fraction of section width that is buffer space, tau is col_buffer_fac                    
+        cw1: width of column 1 (similarly for cw2, cw3)
+
+        The sum over cw's and b's is 1. 
+        x is related to a as follows:
+            x/a = gamma where gamma is sec_wid_fac
+        When plot distances (dist) vary, the smallest plot distance is set to tau*x, and all other plot distances are scaled accordingly.
+            bi = dist/dist_min * tau*x
+
+        Yields the following equation in x:
+        n*x + m/gamma*x + sum(di)*tau*x = 1
+        where n is the number of sections, m is the total number of data attributes present across all sections, and di is the scaled distance between sections i and i+1 as defined above.
+
+        x is then:
+        x = 1/(n + m/gamma + sum(di)*tau)
+        '''
+
+        # set up buffer distance between columns
         if distance_spacing:
             # distances between sections
             if plot_distances is None:
@@ -258,44 +285,34 @@ class Fence:
                     1), 'length of plot_distances must be n_sections - 1'
                 distances = plot_distances
                 coordinates = np.insert(np.cumsum(plot_distances), 0, 0)
-
-            beta = np.min(distances) / (np.max(coordinates) -
-                                        np.min(coordinates))
-            if legend:
-                # x is width of section axes in figure coordinates
-                # x = beta*sec_wid/(1 + beta + beta*sec_wid)
-                x = beta * sec_wid * (1 - legend_wid) / (1 + beta * sec_wid)
-                # D is width in figure coordinates of area to space sections
-                # D = (1-x)/(1+beta)
-                D = 1 - x - legend_wid
-                delta = beta * D
-            else:
-                x = beta * sec_wid / (1 + beta * sec_wid)
-                D = 1 - x
-
-            # now set up axis in figure coordinates
-            coordinates = coordinates - np.min(
-                coordinates)  # center coordinates
-            ax_left_coords = coordinates / np.max(coordinates) * D
-
-            for ii in range(self.n_sections):
-                axes.append(
-                    plt.axes([ax_left_coords[ii], 0, x * sec_wid, 1],
-                             xlim=[0, 1], zorder=10))
-
-        # if user wants uniform spacing between sections in fence diagram
+        
+        # uniform buffer spacing if not specified
         else:
-            x = sec_wid * (1 - legend_wid) / (self.n_sections - 1 + sec_wid)
-            D = 1 - x - legend_wid
-            delta = D / (self.n_sections - 1)
-            ax_left_coords = np.arange(0, D + delta, delta)
-            for ii in range(self.n_sections):
-                # axes.append(fig.add_subplot(1, n_axes, ii+1))
-                axes.append(
-                    plt.axes([ax_left_coords[ii], 0, x * sec_wid, 1],
-                             xlim=[0, 1]))
-                
-        # create data attribute axes
+            distances = np.ones(self.n_sections - 1)
+            coordinates = np.insert(np.cumsum(distances), 0, 0)
+
+        # solve for x, a, and bi
+        dist_norm = distances / np.min(distances) # di above
+        m = np.sum(n_att_sec) # m above
+        sec_wid = 1 / (self.n_sections + m/sec_wid_fac + np.sum(dist_norm)*col_buffer_fac)  # x above
+        data_att_wid = sec_wid / sec_wid_fac # a above
+        bi = dist_norm * col_buffer_fac * sec_wid # bi above
+        col_widths = sec_wid + n_att_sec * data_att_wid # cw above
+        print(f'bi: {bi}')
+        print(f'col_widths: {col_widths}')
+
+        # compute left coordinates of section axes
+        # print(f'cumsum: {np.cumsum(np.insert(col_widths, 0, 0))[0:-1]}')
+        ax_left_coords = np.cumsum(np.insert(col_widths, 0, 0))[0:-1] + \
+                         np.cumsum(np.insert(bi, 0, 0))
+        print(f'ax_left_coords: {ax_left_coords}')
+
+        # set up section axes
+        axes = []
+        for ii in range(self.n_sections):
+            axes.append(plt.axes([ax_left_coords[ii], 0, sec_wid, 1],))
+
+        # set up data attribute axes
         if data_attributes is not None:
             axes_dat = []
             for ii in range(self.n_sections):
@@ -308,17 +325,85 @@ class Fence:
                 for jj in range(len(data_attributes)):
                     if hasattr(self.sections[ii], data_attributes[jj]):
                         cur_sec_dat_axes.append(
-                            plt.axes([ax_left_coords[ii] + (jj+1) * x * sec_wid, 0,
-                                        x * sec_wid, 1], zorder=1))
+                            plt.axes([ax_left_coords[ii] + sec_wid + jj * data_att_wid, 0,
+                                        data_att_wid, 1]))
                     else:
                         cur_sec_dat_axes.append(None)
                 axes_dat.append(cur_sec_dat_axes)
 
-        if legend:
-            leg_left_coord = 1 - delta
-            axes.append(
-                plt.axes([leg_left_coord, 0, x * sec_wid, legend_hei],
-                         xlim=[0, 1]))
+        # if user wants non-uniform spacing between sections in fence diagram
+        # if distance_spacing:
+        #     # distances between sections
+        #     if plot_distances is None:
+        #         distances = np.diff(self.coordinates)
+        #         coordinates = self.coordinates
+        #     else:
+        #         assert len(plot_distances) == (
+        #             self.n_sections -
+        #             1), 'length of plot_distances must be n_sections - 1'
+        #         distances = plot_distances
+        #         coordinates = np.insert(np.cumsum(plot_distances), 0, 0)
+
+        #     beta = np.min(distances) / (np.max(coordinates) -
+                                        # np.min(coordinates))
+            # if legend:
+            #     # x is width of section axes in figure coordinates
+            #     # x = beta*sec_wid/(1 + beta + beta*sec_wid)
+            #     x = beta * sec_wid * (1 - legend_wid) / (1 + beta * sec_wid)
+            #     # D is width in figure coordinates of area to space sections
+            #     # D = (1-x)/(1+beta)
+            #     D = 1 - x - legend_wid
+            #     delta = beta * D
+            # else:
+            # x = beta * sec_wid / (1 + beta * sec_wid)
+            # D = 1 - x
+
+            # # now set up axis in figure coordinates
+            # coordinates = coordinates - np.min(
+            #     coordinates)  # center coordinates
+            # ax_left_coords = coordinates / np.max(coordinates) * D
+
+            # for ii in range(self.n_sections):
+            #     axes.append(
+            #         plt.axes([ax_left_coords[ii], 0, x * sec_wid, 1],
+            #                  xlim=[0, 1], zorder=10))
+
+        # if user wants uniform spacing between sections in fence diagram
+        # else:
+        #     x = sec_wid * (1 - legend_wid) / (self.n_sections - 1 + sec_wid)
+        #     D = 1 - x - legend_wid
+        #     delta = D / (self.n_sections - 1)
+        #     ax_left_coords = np.arange(0, D + delta, delta)
+        #     for ii in range(self.n_sections):
+        #         # axes.append(fig.add_subplot(1, n_axes, ii+1))
+        #         axes.append(
+        #             plt.axes([ax_left_coords[ii], 0, x * sec_wid, 1],
+        #                      xlim=[0, 1]))
+                
+        # create data attribute axes
+        # if data_attributes is not None:
+        #     axes_dat = []
+        #     for ii in range(self.n_sections):
+        #         # dont make an axis if the section doesn't have any data attributes
+        #         if n_att_sec[ii] == 0:
+        #             axes_dat.append(None)
+        #             continue
+        #         else:
+        #             cur_sec_dat_axes = []
+        #         for jj in range(len(data_attributes)):
+        #             if hasattr(self.sections[ii], data_attributes[jj]):
+        #                 cur_sec_dat_axes.append(
+        #                     plt.axes([ax_left_coords[ii] + (jj+1) * x * sec_wid, 0,
+        #                                 x * sec_wid, 1], zorder=1))
+        #             else:
+        #                 cur_sec_dat_axes.append(None)
+        #         axes_dat.append(cur_sec_dat_axes)
+
+        # if legend:
+        #     leg_left_coord = 1 - delta
+        #     axes.append(
+        #         plt.axes([leg_left_coord, 0, x * sec_wid, legend_hei],
+        #                  xlim=[0, 1]))
 
         # enforce axis limits before plotting to maintain swatch scaling
         for ii in range(self.n_sections):
@@ -348,9 +433,9 @@ class Fence:
                                                               style=data_attribute_styles[jj])
 
         # plot and format legend
-        if legend:
-            style.plot_legend(ax=axes[-1])
-            axes[-1].set_xticklabels([])
+        # if legend:
+        #     style.plot_legend(ax=axes[-1])
+        #     axes[-1].set_xticklabels([])
 
         # then move and scale axes so that vertical coordinate is consistent and datum is at same height in figure
         for ii in range(self.n_sections):
