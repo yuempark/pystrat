@@ -278,18 +278,15 @@ class Fence:
             # distances between sections
             if plot_distances is None:
                 distances = np.diff(self.coordinates)
-                coordinates = self.coordinates
             else:
                 assert len(plot_distances) == (
                     self.n_sections -
                     1), 'length of plot_distances must be n_sections - 1'
                 distances = plot_distances
-                coordinates = np.insert(np.cumsum(plot_distances), 0, 0)
         
         # uniform buffer spacing if not specified
         else:
             distances = np.ones(self.n_sections - 1)
-            coordinates = np.insert(np.cumsum(distances), 0, 0)
 
         # solve for x, a, and bi
         dist_norm = distances / np.min(distances) # di above
@@ -302,7 +299,6 @@ class Fence:
         print(f'col_widths: {col_widths}')
 
         # compute left coordinates of section axes
-        # print(f'cumsum: {np.cumsum(np.insert(col_widths, 0, 0))[0:-1]}')
         ax_left_coords = np.cumsum(np.insert(col_widths, 0, 0))[0:-1] + \
                          np.cumsum(np.insert(bi, 0, 0))
         print(f'ax_left_coords: {ax_left_coords}')
@@ -331,80 +327,6 @@ class Fence:
                         cur_sec_dat_axes.append(None)
                 axes_dat.append(cur_sec_dat_axes)
 
-        # if user wants non-uniform spacing between sections in fence diagram
-        # if distance_spacing:
-        #     # distances between sections
-        #     if plot_distances is None:
-        #         distances = np.diff(self.coordinates)
-        #         coordinates = self.coordinates
-        #     else:
-        #         assert len(plot_distances) == (
-        #             self.n_sections -
-        #             1), 'length of plot_distances must be n_sections - 1'
-        #         distances = plot_distances
-        #         coordinates = np.insert(np.cumsum(plot_distances), 0, 0)
-
-        #     beta = np.min(distances) / (np.max(coordinates) -
-                                        # np.min(coordinates))
-            # if legend:
-            #     # x is width of section axes in figure coordinates
-            #     # x = beta*sec_wid/(1 + beta + beta*sec_wid)
-            #     x = beta * sec_wid * (1 - legend_wid) / (1 + beta * sec_wid)
-            #     # D is width in figure coordinates of area to space sections
-            #     # D = (1-x)/(1+beta)
-            #     D = 1 - x - legend_wid
-            #     delta = beta * D
-            # else:
-            # x = beta * sec_wid / (1 + beta * sec_wid)
-            # D = 1 - x
-
-            # # now set up axis in figure coordinates
-            # coordinates = coordinates - np.min(
-            #     coordinates)  # center coordinates
-            # ax_left_coords = coordinates / np.max(coordinates) * D
-
-            # for ii in range(self.n_sections):
-            #     axes.append(
-            #         plt.axes([ax_left_coords[ii], 0, x * sec_wid, 1],
-            #                  xlim=[0, 1], zorder=10))
-
-        # if user wants uniform spacing between sections in fence diagram
-        # else:
-        #     x = sec_wid * (1 - legend_wid) / (self.n_sections - 1 + sec_wid)
-        #     D = 1 - x - legend_wid
-        #     delta = D / (self.n_sections - 1)
-        #     ax_left_coords = np.arange(0, D + delta, delta)
-        #     for ii in range(self.n_sections):
-        #         # axes.append(fig.add_subplot(1, n_axes, ii+1))
-        #         axes.append(
-        #             plt.axes([ax_left_coords[ii], 0, x * sec_wid, 1],
-        #                      xlim=[0, 1]))
-                
-        # create data attribute axes
-        # if data_attributes is not None:
-        #     axes_dat = []
-        #     for ii in range(self.n_sections):
-        #         # dont make an axis if the section doesn't have any data attributes
-        #         if n_att_sec[ii] == 0:
-        #             axes_dat.append(None)
-        #             continue
-        #         else:
-        #             cur_sec_dat_axes = []
-        #         for jj in range(len(data_attributes)):
-        #             if hasattr(self.sections[ii], data_attributes[jj]):
-        #                 cur_sec_dat_axes.append(
-        #                     plt.axes([ax_left_coords[ii] + (jj+1) * x * sec_wid, 0,
-        #                                 x * sec_wid, 1], zorder=1))
-        #             else:
-        #                 cur_sec_dat_axes.append(None)
-        #         axes_dat.append(cur_sec_dat_axes)
-
-        # if legend:
-        #     leg_left_coord = 1 - delta
-        #     axes.append(
-        #         plt.axes([leg_left_coord, 0, x * sec_wid, legend_hei],
-        #                  xlim=[0, 1]))
-
         # enforce axis limits before plotting to maintain swatch scaling
         for ii in range(self.n_sections):
             axes[ii].set_xlim([0, 1])
@@ -431,11 +353,6 @@ class Fence:
                         self.sections[ii].plot_data_attribute(attribute, 
                                                               ax=axes_dat[ii][jj],
                                                               style=data_attribute_styles[jj])
-
-        # plot and format legend
-        # if legend:
-        #     style.plot_legend(ax=axes[-1])
-        #     axes[-1].set_xticklabels([])
 
         # then move and scale axes so that vertical coordinate is consistent and datum is at same height in figure
         for ii in range(self.n_sections):
@@ -464,13 +381,12 @@ class Fence:
                 for jj in range(self.n_sections - 1):
                     # need to account for data attribute axes
                     if data_attributes is not None:
-                        # point needs to account for the width of the section axis
-                        # including unit labels
-                        xyA = [np.ptp(axes[jj].get_xlim()) + np.max(n_att_sec[jj]), self.correlations[jj, ii]]
+                        # point needs to account for the width of the section axis including unit labels
+                        xyA = [axes[jj].get_xlim()[1] + np.max(n_att_sec[jj]), self.correlations[jj, ii]]
                         # don't forget about unit labels
                         xyB = [axes[jj].get_xlim()[0], self.correlations[jj + 1, ii]]
                     else:
-                        xyA = [np.ptp(axes[jj].get_xlim()), self.correlations[jj, ii]]
+                        xyA = [axes[jj].get_xlim()[1], self.correlations[jj, ii]]
                         # xyB = [0, self.correlations[jj + 1, ii]]
                         xyB = [axes[jj].get_xlim()[0], self.correlations[jj + 1, ii]]
                     if np.any(np.isnan(xyA)) or np.any(np.isnan(xyB)):
