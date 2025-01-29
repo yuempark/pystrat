@@ -8,4 +8,4 @@ pandas
 matplotlib
 pillow
 myst-nb
-insipid
+insipid-sphinx-theme
