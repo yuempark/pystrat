@@ -1558,9 +1558,6 @@ def plot_swatch(swatch_code, extent, ax, swatch_wid=1.5, warn_size=False):
 
     warn_size : boolean (default: False)
         Whether or not to issue warnings on swatch sizes.
-
-    mask : [to be implemented]
-        masking geometry to apply to tesselated swatch (probably in axis coordinates?)
     """
 
     x0, x1, y0, y1 = extent
@@ -1576,7 +1573,7 @@ def plot_swatch(swatch_code, extent, ax, swatch_wid=1.5, warn_size=False):
         return
 
     # load swatch
-    swatch = Image.open(mod_dir + '../../../swatches/png/%s.png' % swatch_code)
+    swatch = Image.open(mod_dir + 'swatches/png/%s.png' % swatch_code)
    
     ax_x_in, ax_y_in = get_inch_per_dat(ax)
 
