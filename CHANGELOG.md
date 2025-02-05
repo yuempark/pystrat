@@ -1,6 +1,11 @@
 # Changelog
 
-## v2.0
+## 2.0.1
+
+### Fixed
+- swatches now part of package data and will work after pip install
+
+## 2.0.0
 
 ### Added
 - new `Fence` class for combining Sections
