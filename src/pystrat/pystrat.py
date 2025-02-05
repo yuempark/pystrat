@@ -25,7 +25,8 @@ import matplotlib.pyplot as plt
 import os
 import copy
 
-# warnings
+# python things
+from importlib import resources
 import warnings
 
 # plotting
@@ -1539,8 +1540,7 @@ def attribute_convert_and_check(attribute):
 
 
 def plot_swatch(swatch_code, extent, ax, swatch_wid=1.5, warn_size=False):
-    """
-    plot a tesselated USGS geologic swatch to fit a desired extent
+    """Plot a tesselated USGS geologic swatch to fit a desired extent
 
     Parameters
     ----------  
@@ -1572,8 +1572,9 @@ def plot_swatch(swatch_code, extent, ax, swatch_wid=1.5, warn_size=False):
                 'Extent has no width and/or height. Swatch cannot be plotted.')
         return
 
-    # load swatch
-    swatch = Image.open(mod_dir + 'swatches/png/%s.png' % swatch_code)
+    # load swatch, use swatch code as file name
+    swatch_path = resources.files('pystrat') / 'swatches' / f'{swatch_code}.png'
+    swatch = Image.open(swatch_path)
    
     ax_x_in, ax_y_in = get_inch_per_dat(ax)
 
