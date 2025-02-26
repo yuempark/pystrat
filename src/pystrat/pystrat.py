@@ -1313,13 +1313,15 @@ class Style():
         The widths that will be assigned to the associated labels.
         Values must be between 0 and 1.
 
-    swatch_values : 1d array_like
+    swatch_values : 1d array-like
         USGS swatch codes (see swatches/png/) for labels.
         Give zero for no swatch.
 
-    annotations : dict or None
-        Dictionary linking annotation names to png file paths for plotting
-        annotations.
+    annotations : list, dict, or None
+        Specification of annotations to plot alongside sections, by default None. 
+        If None, no annotations are plotted. 
+        User can also provide a list of annotation names to select among the default annotations to plot. See :py:meth:`Style.plot_default_annotations()` for the default annotations provided by pystrat.
+        Alternatively, the user can provide a dictionary linking annotation names to png file paths for plotting custom annotations.
 
     swatch_wid : float (default 1.5)
         Width of the swatch pattern in inches.
@@ -1357,8 +1359,30 @@ class Style():
         self.color_values = color_values
         self.width_values = width_values
         self.swatch_values = swatch_values
-        self.annotations = annotations
         self.swatch_wid = swatch_wid
+
+        # validate annotations
+        if annotations is not None:
+            if isinstance(annotations, list):
+                # check that all annotations are in the default set
+                default_annotations_pngs = os.listdir(resources.files('pystrat').joinpath('annotations'))
+                default_annotations = [annotation_png.split('.')[0] for annotation_png in default_annotations_pngs]
+                for annotation in annotations:
+                    if annotation not in default_annotations:
+                        warnings.warn(f'Annotation {annotation} not in default set and will not be plotted.')
+                        annotations.remove(annotation)
+                # make into dictionary with paths to default pngs
+                annotations = {annotation: resources.files('pystrat').joinpath('annotations', f'{annotation}.png') for annotation in annotations}
+            # if annotations are a dictionary
+            elif isinstance(annotations, dict):
+                # check that all annotations are png files
+                for annotation in annotations:
+                    if not os.path.isfile(annotations[annotation]):
+                        warnings.warn(f'Annotation {annotation} is not a png file. No annotation will be plotted.')
+                        del annotations[annotation]
+            else:
+                raise ValueError('Annotations must be a list or a dictionary.')
+        self.annotations = annotations
 
         # add some other useful attributes
         self.n_labels = len(labels)
@@ -1371,6 +1395,14 @@ class Style():
         ----------
         ax : matplotlib.pyplot.axes, optional
             Axes to plot into, by default None. If None, creates an axis.
+
+        Examples
+        --------
+        .. plot::
+            :include-source:
+
+            import pystrat
+            pystrat.Style.plot_default_annotations()
         """
         if ax is None:
             ax = plt.axes()
@@ -1496,7 +1528,6 @@ class Style():
                         va='center',
                         fontsize=fontsize)
                 plot_annotation(list(self.annotations.values())[ii], pos, height, ax)
-
 
         # prettify
         ax.set_xlim(0, 1)

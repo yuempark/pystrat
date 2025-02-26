@@ -73,6 +73,7 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
     "myst_nb",
+    "matplotlib.sphinxext.plot_directive"
 ]
 
 # myst_nb config
