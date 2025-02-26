@@ -1,23 +1,3 @@
-########################################################################
-############################ PACKAGE DESIGN ############################
-########################################################################
-
-# pystrat strives to take advantage of object oriented programming (OOP)
-# by organizing stratigraphic data into classes.
-
-# The core class upon which this package is built is the Section class,
-# which organizes the measured stratigraphic log (i.e. the thicknesses
-# and facies of units).
-
-# Any additional data that is tied to the stratigraphic height, but not
-# explicitly tied to the individually measured units, is organized in
-# the Data subclass.
-
-# The plotting style for a stratigraphic section is organized in the
-# Style class.
-
-########################################################################
-
 # import standard modules
 import numpy as np
 import pandas as pd
@@ -39,6 +19,7 @@ from PIL import Image
 ## Global vars
 ##
 mod_dir = os.path.dirname(os.path.realpath(__file__))
+
 
 ###############
 ### CLASSES ###
@@ -1382,6 +1363,37 @@ class Style():
         # add some other useful attributes
         self.n_labels = len(labels)
 
+    @staticmethod
+    def plot_default_annotations(ax=None):
+        """Plot annotations provided by pystrat.
+
+        Parameters
+        ----------
+        ax : matplotlib.pyplot.axes, optional
+            Axes to plot into, by default None. If None, creates an axis.
+        """
+        if ax is None:
+            ax = plt.axes()
+
+        # retrieve default annotations
+        annotation_pngs = os.listdir(resources.files('pystrat').joinpath('annotations'))
+        annotations = [annotation_png.split('.')[0] for annotation_png in annotation_pngs]
+
+        ax.set_ylim([0, len(annotation_pngs)])
+        ax.autoscale(False)
+
+        # plot annotations
+        for ii, annotation_png in enumerate(annotation_pngs):
+            cur_path = resources.files('pystrat').joinpath('annotations', annotation_png)
+            pos = [0, ii]
+            plot_annotation(cur_path, pos, 0.5, ax)
+
+        ax.set_frame_on(False)
+        ax.set_xticks([])
+        ax.set_yticks(0.3 + np.arange(len(annotation_pngs)))
+        ax.set_yticklabels(annotations, fontsize=10)
+        ax.tick_params(axis='y', left=False)
+
     def plot_legend(self, 
                     ax=None, 
                     legend_unit_height=0.25,
@@ -1509,6 +1521,9 @@ class Style():
             obj.set_clip_on(False)
 
 
+########################
+### HELPER FUNCTIONS ###
+########################
 
 def attribute_convert_and_check(attribute):
     """
