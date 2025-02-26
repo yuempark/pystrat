@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.1.0
+
+### Added
+- `pystrat` now ships with a small (but growing) library of default annotations for plotting alongside sections
+  - `pystrat.Style(annotations=)` can be initialized with a list containing a subset of the default annotations
+- `pystrat.Style.plot_default_annotations()` provides visualization of the default annotations
+
 ## 2.0.1
 
 ### Fixed
