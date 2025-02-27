@@ -1578,6 +1578,9 @@ def attribute_convert_and_check(attribute):
     if type(attribute) == pd.core.series.Series:
         attribute = attribute.values
 
+    # make at least 1d
+    attribute = np.atleast_1d(attribute)
+
     # check that the data are 1d
     if attribute.ndim != 1:
         raise Exception('Data must be 1d.')
